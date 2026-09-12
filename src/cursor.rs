@@ -1,8 +1,10 @@
+#![allow(dead_code)]
+
 use std::io::{self, Read};
 
 pub struct CursorReader<R> {
-    pub inner: R,
-    pub offset: u64,
+    inner: R,
+    offset: u64,
 }
 
 impl<R: Read> CursorReader<R> {
@@ -66,6 +68,19 @@ impl<R: Read> CursorReader<R> {
         let mut bytes = [0u8; 1];
         self.read_exact(&mut bytes)?;
         Ok(u8::from_be_bytes(bytes))
+    }
+
+    pub fn read_utf16_le_to_string(&mut self, char_count: usize) -> io::Result<String> {
+        let mut u8_buffer = Vec::with_capacity(char_count / 8);
+
+        self.read_exact(&mut u8_buffer)?;
+
+        let u16_buffer: Vec<u16> = u8_buffer
+            .chunks_exact(2)
+            .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
+            .collect();
+
+        Ok(String::from_utf16_lossy(&u16_buffer))
     }
 
     pub fn discard(&mut self, mut count: usize) -> io::Result<()> {
