@@ -93,28 +93,28 @@ pub struct PlayerGameData {
 }
 
 impl PlayerGameData {
-    pub fn read_unk0xc0<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 24]> {
+    fn read_unk0xc0<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 24]> {
         let mut unk0xc0 = [0u8; 24];
 
         cursor.read_exact(&mut unk0xc0)?;
 
         Ok(unk0xc0)
     }
-    pub fn read_unk0xdd<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 26]> {
+    fn read_unk0xdd<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 26]> {
         let mut unk0xdd = [0u8; 26];
 
         cursor.read_exact(&mut unk0xdd)?;
 
         Ok(unk0xdd)
     }
-    pub fn read_unk0xfb<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 21]> {
+    fn read_unk0xfb<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 21]> {
         let mut unk0xfb = [0u8; 21];
 
         cursor.read_exact(&mut unk0xfb)?;
 
         Ok(unk0xfb)
     }
-    pub fn read_unk0x17c<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 52]> {
+    fn read_unk0x17c<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 52]> {
         let mut unk0x17c = [0u8; 52];
 
         cursor.read_exact(&mut unk0x17c)?;
