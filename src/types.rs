@@ -2,7 +2,7 @@
 
 use std::io::{self, Read};
 
-use crate::cursor::CursorReader;
+use crate::{constants as con, cursor::CursorReader};
 
 #[derive(Debug, Default)]
 pub struct Gaitem {
@@ -305,72 +305,229 @@ impl ActiveWeaponSlotsAndArmStyle {
     }
 }
 
+#[derive(Debug)]
 pub struct CharacterSlot {
-    version:u32,
-    map_id:u32,
-    unk0x8:[u8; 8],
-    unk0x10:[u8; 16],
-    gaitem_map: [Gaitem; 5120],
-    player_game_data:PlayerGameData,
-    sp_effects:[SPEffect;13],
+    version: u32,
+    map_id: u32,
+    unk0x8: [u8; 8],
+    unk0x10: [u8; 16],
+    gaitem_map: Box<[Gaitem; 5120]>,
+    pub(crate) player_game_data: PlayerGameData,
+    sp_effects: Box<[SPEffect; 13]>,
     equipped_items_equip_index: EquipmentSlots,
-    active_weapon_slots_and_arm:ActiveWeaponSlotsAndArmStyle,
-    equipped_items_item_id:EquipmentSlots,
-    equipped_items_gaitem_handle:EquipmentSlots,
-    inventory_held:Inventory,
-    equipped_spells:EquippedSpells,
-    equipped_items:EquippedItems,
-    equipped_gestures:EquippedGestures,
-    acquired_projectiles:AcquiredProjectiles,
-    equipped_armaments_and_items:EquippedArmamentsAndItems,
-    equipped_physics:EquippedPhysics,
-    face_data:FaceData,
-    inventory_storage_box:Inventory,
-    gestures:Gestures,
-    unlocked_regions:Regions,
-    horse:RideGameData,
-    control_byte_maybe:u8,
-    blood_stain:BloodStain,
-    unk_gamedataman_0x120:u32,
-    unk_gamedataman_0x88:u32,
-    menu_profile_save_load:MenuSaveLoad,
-    trophy_equip_data:TrophyEquipData,
-    gaitem_game_data:GaitemGameData,
-    tutorial_data:TutorialData,
-    gameman_0x8c:u8,
-    gameman_0x8d:u8,
-    gameman_0x8e:u8,
-    total_deaths_count:u32,
-    character_type:i32,
-    in_online_session_flag:u8,
-    character_type_online:u32,
-    last_rested_grace:u32,
-    not_alone_flag:u8,
-    in_game_countdown_timer:u32,
-    unk_gamedataman_0x124:u32,
-    event_flags:Vec<u8>, // 1_833_375
+    active_weapon_slots_and_arm: ActiveWeaponSlotsAndArmStyle,
+    equipped_items_item_id: EquipmentSlots,
+    equipped_items_gaitem_handle: EquipmentSlots,
+    inventory_held: Inventory,
+    equipped_spells: EquippedSpells,
+    equipped_items: EquippedItems,
+    equipped_gestures: EquippedGestures,
+    acquired_projectiles: AcquiredProjectiles,
+    equipped_armaments_and_items: EquippedArmamentsAndItems,
+    equipped_physics: EquippedPhysics,
+    face_data: FaceData,
+    inventory_storage_box: Inventory,
+    gestures: Gestures,
+    unlocked_regions: Regions,
+    horse: RideGameData,
+    control_byte_maybe: u8,
+    blood_stain: BloodStain,
+    unk_gamedataman_0x120: u32,
+    unk_gamedataman_0x88: u32,
+    menu_profile_save_load: MenuSaveLoad,
+    trophy_equip_data: TrophyEquipData,
+    gaitem_game_data: GaitemGameData,
+    tutorial_data: TutorialData,
+    gameman_0x8c: u8,
+    gameman_0x8d: u8,
+    gameman_0x8e: u8,
+    total_deaths_count: u32,
+    character_type: i32,
+    in_online_session_flag: u8,
+    character_type_online: u32,
+    last_rested_grace: u32,
+    not_alone_flag: u8,
+    in_game_countdown_timer: u32,
+    unk_gamedataman_0x124: u32,
+    event_flags: Vec<u8>, // 1_833_375
     event_flags_terminator: u8,
-    field_area:FieldArea,
-    world_area:WorldArea,
-    world_geom_man:WorldGeomMan,
-    world_geom_man2:WorldGeomMan,
-    rend_man:RendMan,
-    player_coordinates:PlayerCoordinates,
-    game_man_0x5be:u8,
-    game_man_0x5bf:u8,
-    spawn_point_entity_id:u32,
-    game_man_0xb64:u32,
-    temp_spawn_point_entity_id:u32,
-    game_man_0xcb3:u8,
-    net_man:NetMan,
-    world_area_weather:WorldAreaWeather,
-    world_area_time:WorldAreaTime,
-    base_version:BaseVersion,
-    steam_id:u64,
-    ps5_activity:PS5Activity,
-    dlc:DLC,
-    player_data_hash:PlayerGameDataHash,
+    field_area: FieldArea,
+    world_area: WorldArea,
+    world_geom_man: WorldGeomMan,
+    world_geom_man2: WorldGeomMan,
+    rend_man: RendMan,
+    player_coordinates: PlayerCoordinates,
+    game_man_0x5be: u8,
+    game_man_0x5bf: u8,
+    spawn_point_entity_id: u32,
+    game_man_0xb64: u32,
+    temp_spawn_point_entity_id: u32,
+    game_man_0xcb3: u8,
+    net_man: NetMan,
+    world_area_weather: WorldAreaWeather,
+    world_area_time: WorldAreaTime,
+    base_version: BaseVersion,
+    steam_id: u64,
+    ps5_activity: PS5Activity,
+    dlc: DLC,
+    player_data_hash: PlayerGameDataHash,
     rest: Vec<u8>,
+}
+
+impl CharacterSlot {
+    fn read_sp_effects<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Box<[SPEffect; 13]>> {
+        // Vec -> boxed array, infallible here because we push exactly 13
+        let mut v = Vec::with_capacity(13);
+        for _ in 0..13 {
+            v.push(SPEffect::read(cursor)?);
+        }
+        // have to map Vec error -> io::Error
+        v.into_boxed_slice()
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "sp_effects len"))
+    }
+
+    fn read_event_flags<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<u8>> {
+        const LEN: usize = 1_833_375;
+        let mut v = vec![0u8; LEN];
+        cursor.read_exact(&mut v)?;
+        Ok(v)
+    }
+
+    fn parse_gaitem_map<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Box<[Gaitem; 5120]>> {
+        let mut gaitems: Vec<Gaitem> = Vec::with_capacity(5120);
+
+        while gaitems.len() < con::GAITEM_COUNT_NEW {
+            let gaitem_handle = cursor.read_u32_le()?;
+
+            let item_id = cursor.read_u32_le()?;
+
+            let mut item = Gaitem {
+                gaitem_handle,
+                item_id,
+                ..Default::default()
+            };
+
+            if gaitem_handle != 0 {
+                let handle_type = gaitem_handle & 0xF0000000;
+
+                if gaitem_handle != 0 && handle_type != 0xC0000000 {
+                    let unk_0x10 = cursor.read_u32_le()?;
+
+                    item.unk_0x10 = Some(unk_0x10);
+
+                    let unk_0x14 = cursor.read_u32_le()?;
+
+                    item.unk_0x14 = Some(unk_0x14);
+
+                    if handle_type == 0x80000000 {
+                        let gem_gaitem_handle = cursor.read_u32_le()?;
+
+                        item.gem_gaitem_handle = Some(gem_gaitem_handle);
+
+                        let unk_0x1c = cursor.read_u8_le()?;
+
+                        item.unk_0x1c = Some(unk_0x1c);
+                    }
+                }
+
+                // println!("{:?}", item);
+            }
+
+            gaitems.push(item);
+        }
+
+        gaitems
+            .into_boxed_slice()
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "sp_effects len"))
+    }
+
+    fn read_unk0x8<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 8]> {
+        let mut unk0x8 = [0u8; 8];
+
+        cursor.read_exact(&mut unk0x8)?;
+
+        Ok(unk0x8)
+    }
+
+    fn read_unk0x10<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 16]> {
+        let mut unk0x10 = [0u8; 16];
+
+        cursor.read_exact(&mut unk0x10)?;
+
+        Ok(unk0x10)
+    }
+
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            version: cursor.read_u32_le()?,
+            map_id: cursor.read_u32_le()?,
+            unk0x8: Self::read_unk0x8(cursor)?,
+            unk0x10: Self::read_unk0x10(cursor)?,
+            gaitem_map: Self::parse_gaitem_map(cursor)?,
+            player_game_data: PlayerGameData::read(cursor)?,
+            sp_effects: Self::read_sp_effects(cursor)?,
+            equipped_items_equip_index: EquipmentSlots::read(cursor)?,
+            active_weapon_slots_and_arm: ActiveWeaponSlotsAndArmStyle::read(cursor)?,
+            equipped_items_item_id: EquipmentSlots::read(cursor)?,
+            equipped_items_gaitem_handle: EquipmentSlots::read(cursor)?,
+            inventory_held: Inventory::read(cursor)?,
+            equipped_spells: EquippedSpells::read(cursor)?,
+            equipped_items: EquippedItems::read(cursor)?,
+            equipped_gestures: EquippedGestures::read(cursor)?,
+            acquired_projectiles: AcquiredProjectiles::read(cursor)?,
+            equipped_armaments_and_items: EquippedArmamentsAndItems::read(cursor)?,
+            equipped_physics: EquippedPhysics::read(cursor)?,
+            face_data: FaceData::read(cursor)?,
+            inventory_storage_box: Inventory::read(cursor)?,
+            gestures: Gestures::read(cursor)?,
+            unlocked_regions: Regions::read(cursor)?,
+            horse: RideGameData::read(cursor)?,
+            control_byte_maybe: cursor.read_u8_le()?,
+            blood_stain: BloodStain::read(cursor)?,
+            unk_gamedataman_0x120: cursor.read_u32_le()?,
+            unk_gamedataman_0x88: cursor.read_u32_le()?,
+            menu_profile_save_load: MenuSaveLoad::read(cursor)?,
+            trophy_equip_data: TrophyEquipData::read(cursor)?,
+            gaitem_game_data: GaitemGameData::read(cursor)?,
+            tutorial_data: TutorialData::read(cursor)?,
+            gameman_0x8c: cursor.read_u8_le()?,
+            gameman_0x8d: cursor.read_u8_le()?,
+            gameman_0x8e: cursor.read_u8_le()?,
+            total_deaths_count: cursor.read_u32_le()?,
+            character_type: cursor.read_i32_le()?,
+            in_online_session_flag: cursor.read_u8_le()?,
+            character_type_online: cursor.read_u32_le()?,
+            last_rested_grace: cursor.read_u32_le()?,
+            not_alone_flag: cursor.read_u8_le()?,
+            in_game_countdown_timer: cursor.read_u32_le()?,
+            unk_gamedataman_0x124: cursor.read_u32_le()?,
+            event_flags: Self::read_event_flags(cursor)?, // 1_833_375
+            event_flags_terminator: cursor.read_u8_le()?,
+            field_area: FieldArea::read(cursor)?,
+            world_area: WorldArea::read(cursor)?,
+            world_geom_man: WorldGeomMan::read(cursor)?,
+            world_geom_man2: WorldGeomMan::read(cursor)?,
+            rend_man: RendMan::read(cursor)?,
+            player_coordinates: PlayerCoordinates::read(cursor)?,
+            game_man_0x5be: cursor.read_u8_le()?,
+            game_man_0x5bf: cursor.read_u8_le()?,
+            spawn_point_entity_id: cursor.read_u32_le()?,
+            game_man_0xb64: cursor.read_u32_le()?,
+            temp_spawn_point_entity_id: cursor.read_u32_le()?,
+            game_man_0xcb3: cursor.read_u8_le()?,
+            net_man: NetMan::read(cursor)?,
+            world_area_weather: WorldAreaWeather::read(cursor)?,
+            world_area_time: WorldAreaTime::read(cursor)?,
+            base_version: BaseVersion::read(cursor)?,
+            steam_id: cursor.read_u64_le()?,
+            ps5_activity: PS5Activity::read(cursor)?,
+            dlc: DLC::read(cursor)?,
+            player_data_hash: PlayerGameDataHash::read(cursor)?,
+            rest: Vec::new(),
+        })
+    }
 }
 
 #[derive(Debug)]

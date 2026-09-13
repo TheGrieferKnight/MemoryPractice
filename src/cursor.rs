@@ -70,6 +70,66 @@ impl<R: Read> CursorReader<R> {
         Ok(u8::from_be_bytes(bytes))
     }
 
+    pub fn read_i128_le(&mut self) -> io::Result<i128> {
+        let mut bytes = [0u8; 16];
+        self.read_exact(&mut bytes)?;
+        Ok(i128::from_le_bytes(bytes))
+    }
+
+    pub fn read_i64_le(&mut self) -> io::Result<i64> {
+        let mut bytes = [0u8; 8];
+        self.read_exact(&mut bytes)?;
+        Ok(i64::from_le_bytes(bytes))
+    }
+
+    pub fn read_i32_le(&mut self) -> io::Result<i32> {
+        let mut bytes = [0u8; 4];
+        self.read_exact(&mut bytes)?;
+        Ok(i32::from_le_bytes(bytes))
+    }
+
+    pub fn read_i16_le(&mut self) -> io::Result<i16> {
+        let mut bytes = [0u8; 2];
+        self.read_exact(&mut bytes)?;
+        Ok(i16::from_le_bytes(bytes))
+    }
+
+    pub fn read_i8_le(&mut self) -> io::Result<i8> {
+        let mut bytes = [0u8; 1];
+        self.read_exact(&mut bytes)?;
+        Ok(i8::from_le_bytes(bytes))
+    }
+
+    pub fn read_i128_be(&mut self) -> io::Result<i128> {
+        let mut bytes = [0u8; 16];
+        self.read_exact(&mut bytes)?;
+        Ok(i128::from_be_bytes(bytes))
+    }
+
+    pub fn read_i64_be(&mut self) -> io::Result<i64> {
+        let mut bytes = [0u8; 8];
+        self.read_exact(&mut bytes)?;
+        Ok(i64::from_be_bytes(bytes))
+    }
+
+    pub fn read_i32_be(&mut self) -> io::Result<i32> {
+        let mut bytes = [0u8; 4];
+        self.read_exact(&mut bytes)?;
+        Ok(i32::from_be_bytes(bytes))
+    }
+
+    pub fn read_i16_be(&mut self) -> io::Result<i16> {
+        let mut bytes = [0u8; 2];
+        self.read_exact(&mut bytes)?;
+        Ok(i16::from_be_bytes(bytes))
+    }
+
+    pub fn read_i8_be(&mut self) -> io::Result<i8> {
+        let mut bytes = [0u8; 1];
+        self.read_exact(&mut bytes)?;
+        Ok(i8::from_be_bytes(bytes))
+    }
+
     pub fn read_f64_le(&mut self) -> io::Result<f64> {
         let mut bytes = [0u8; 8];
         self.read_exact(&mut bytes)?;
