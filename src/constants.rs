@@ -18,3 +18,5 @@ pub const CHECKSUM_SIZE: usize = 16;
 
 pub const GAITEM_COUNT_OLD: usize = 5118;
 pub const GAITEM_COUNT_NEW: usize = 5120;
+
+pub const SPEFFECT_ENTRY_COUNT: usize = 13;

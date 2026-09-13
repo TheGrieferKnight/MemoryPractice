@@ -70,6 +70,28 @@ impl<R: Read> CursorReader<R> {
         Ok(u8::from_be_bytes(bytes))
     }
 
+    pub fn read_f64_le(&mut self) -> io::Result<f64> {
+        let mut bytes = [0u8; 8];
+        self.read_exact(&mut bytes)?;
+        Ok(f64::from_le_bytes(bytes))
+    }
+    pub fn read_f32_le(&mut self) -> io::Result<f32> {
+        let mut bytes = [0u8; 4];
+        self.read_exact(&mut bytes)?;
+        Ok(f32::from_le_bytes(bytes))
+    }
+
+    pub fn read_f64_be(&mut self) -> io::Result<f64> {
+        let mut bytes = [0u8; 8];
+        self.read_exact(&mut bytes)?;
+        Ok(f64::from_be_bytes(bytes))
+    }
+    pub fn read_f32_be(&mut self) -> io::Result<f32> {
+        let mut bytes = [0u8; 4];
+        self.read_exact(&mut bytes)?;
+        Ok(f32::from_be_bytes(bytes))
+    }
+
     pub fn read_utf16_le_to_string(&mut self, char_count: usize) -> io::Result<String> {
         let mut u8_buffer = Vec::with_capacity(char_count / 8);
 
