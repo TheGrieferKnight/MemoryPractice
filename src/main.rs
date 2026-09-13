@@ -1,6 +1,8 @@
-use crate::constants::self as con;
+use crate::constants as con;
 use crate::cursor::CursorReader;
-use crate::types::{Gaitem, PlayerGameData};
+use crate::types::{
+    ActiveWeaponSlotsAndArmStyle, EquipmentSlots, Gaitem, PlayerGameData, SPEffect,
+};
 
 use std::fs::File;
 use std::io::{self, BufReader, Read};
@@ -30,27 +32,8 @@ fn read_checksum<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; con::
     Ok(checksum)
 }
 
-fn parse_character_slot<R: Read>(
-    cursor: &mut CursorReader<R>,
-    save_offsets: &mut Vec<u64>,
-) -> io::Result<()> {
+fn parse_gaitem_map<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<usize> {
     let mut item_count: usize = 0;
-
-    let checksum = read_checksum(cursor)?;
-
-    println!("Checksum: {:?}", checksum);
-
-    save_offsets.push(cursor.position());
-
-    let version = cursor.read_u32_le()?;
-
-    println!("Version: {:?}", version);
-
-    let map_id = cursor.read_u32_le()?;
-
-    println!("Map ID: {:?}", map_id);
-
-    cursor.discard(24)?;
 
     while item_count < con::GAITEM_COUNT_NEW {
         let gaitem_handle = cursor.read_u32_le()?;
@@ -92,9 +75,72 @@ fn parse_character_slot<R: Read>(
         }
     }
 
+    Ok(item_count)
+}
+
+fn parse_character_slot<R: Read>(
+    cursor: &mut CursorReader<R>,
+    save_offsets: &mut Vec<u64>,
+) -> io::Result<()> {
+    let checksum = read_checksum(cursor)?;
+
+    println!("Checksum: {:?}", checksum);
+
+    save_offsets.push(cursor.position());
+
+    let version = cursor.read_u32_le()?;
+
+    println!("Version: {:?}", version);
+
+    let map_id = cursor.read_u32_le()?;
+
+    println!("Map ID: {:?}", map_id);
+
+    // Discard unknown bytes for now. Will need to be stored in case of save editing.
+    cursor.discard(24)?;
+
+    let item_count = parse_gaitem_map(cursor);
+
     println!("Item count: {:?}", item_count);
 
     parse_player_game_data(cursor)?;
+
+    let mut speffect_entry_count: usize = 0;
+
+    println!();
+
+    while speffect_entry_count < con::SPEFFECT_ENTRY_COUNT {
+        let sp_effect = SPEffect::read(cursor)?;
+
+        println!("SP Effect {}: {:?}", speffect_entry_count, sp_effect);
+
+        speffect_entry_count += 1;
+    }
+
+    let equipped_items_equip_index = EquipmentSlots::read(cursor)?;
+
+    let active_weapon_slots_and_arm = ActiveWeaponSlotsAndArmStyle::read(cursor)?;
+
+    let equipped_items_item_id = EquipmentSlots::read(cursor)?;
+
+    let equipped_items_gaitem_handle = EquipmentSlots::read(cursor)?;
+
+    println!(
+        "Equipped Item Equip Index: {:?}",
+        equipped_items_equip_index
+    );
+
+    println!(
+        "Active Weapon Slots and Arm: {:?}",
+        active_weapon_slots_and_arm
+    );
+
+    println!("Equipped Items Item ID: {:?}", equipped_items_item_id);
+
+    println!(
+        "Equipped Items Gaitem Handle: {:?}",
+        equipped_items_gaitem_handle
+    );
 
     Ok(())
 }
