@@ -122,6 +122,7 @@ impl PlayerGameData {
         Ok(unk0x17c)
     }
 
+    /// Creates an instance of the PlayerGameData struct by reading the next 432 bytes from the Cursors current offset.
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
         Ok(Self {
             unk0x0: cursor.read_u32_le()?,
@@ -199,5 +200,427 @@ impl PlayerGameData {
             group_password5_terminator: cursor.read_u16_le()?,
             unk0x17c: Self::read_unk0x17c(cursor)?, // (padding)
         })
+    }
+}
+
+#[derive(Debug)]
+pub struct SPEffect {
+    pub sp_effect_id: u32,
+    pub remaining_time: f32,
+    pub unk0x8: u32,
+    pub unk0x10: u32,
+}
+
+impl SPEffect {
+    /// Creates an instance of the SPEffect struct by reading the next 16 bytes from the Cursors current offset.
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            sp_effect_id: cursor.read_u32_le()?,
+            remaining_time: cursor.read_f32_le()?,
+            unk0x8: cursor.read_u32_le()?,
+            unk0x10: cursor.read_u32_le()?,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct EquipmentSlots {
+    pub left_hand_armament1: u32,
+    pub right_hand_armament1: u32,
+    pub left_hand_armament2: u32,
+    pub right_hand_armament2: u32,
+    pub left_hand_armament3: u32,
+    pub right_hand_armament3: u32,
+    pub arrows1: u32,
+    pub bolts1: u32,
+    pub arrows2: u32,
+    pub bolts2: u32,
+    pub unk0x28: u32,
+    pub unk0x2c: u32,
+    pub head: u32,
+    pub chest: u32,
+    pub arms: u32,
+    pub legs: u32,
+    pub unk0x40: u32,
+    pub talisman1: u32,
+    pub talisman2: u32,
+    pub talisman3: u32,
+    pub talisman4: u32,
+    pub unk0x54: u32,
+}
+
+impl EquipmentSlots {
+    /// Creates an instance of the EquipmentSlots struct by reading the next 88 bytes from the Cursors current offset.
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            left_hand_armament1: cursor.read_u32_le()?,
+            right_hand_armament1: cursor.read_u32_le()?,
+            left_hand_armament2: cursor.read_u32_le()?,
+            right_hand_armament2: cursor.read_u32_le()?,
+            left_hand_armament3: cursor.read_u32_le()?,
+            right_hand_armament3: cursor.read_u32_le()?,
+            arrows1: cursor.read_u32_le()?,
+            bolts1: cursor.read_u32_le()?,
+            arrows2: cursor.read_u32_le()?,
+            bolts2: cursor.read_u32_le()?,
+            unk0x28: cursor.read_u32_le()?,
+            unk0x2c: cursor.read_u32_le()?,
+            head: cursor.read_u32_le()?,
+            chest: cursor.read_u32_le()?,
+            arms: cursor.read_u32_le()?,
+            legs: cursor.read_u32_le()?,
+            unk0x40: cursor.read_u32_le()?,
+            talisman1: cursor.read_u32_le()?,
+            talisman2: cursor.read_u32_le()?,
+            talisman3: cursor.read_u32_le()?,
+            talisman4: cursor.read_u32_le()?,
+            unk0x54: cursor.read_u32_le()?,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct ActiveWeaponSlotsAndArmStyle {
+    pub arm_style: u32,
+    pub left_hand_weapon_active_slot: u32,
+    pub right_hand_weapon_active_slot: u32,
+    pub left_arrow_active_slot: u32,
+    pub right_arrow_active_slot: u32,
+    pub left_bolt_active_slot: u32,
+    pub right_bolt_active_slot: u32,
+}
+
+impl ActiveWeaponSlotsAndArmStyle {
+    /// Creates an instance of the ActiveWeaponSlotsAndArmStyle struct by reading the next 88 bytes from the Cursors current offset.
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            arm_style: cursor.read_u32_le()?,
+            left_hand_weapon_active_slot: cursor.read_u32_le()?,
+            right_hand_weapon_active_slot: cursor.read_u32_le()?,
+            left_arrow_active_slot: cursor.read_u32_le()?,
+            right_arrow_active_slot: cursor.read_u32_le()?,
+            left_bolt_active_slot: cursor.read_u32_le()?,
+            right_bolt_active_slot: cursor.read_u32_le()?,
+        })
+    }
+}
+
+pub struct CharacterSlot {
+    version:u32,
+    map_id:u32,
+    unk0x8:[u8; 8],
+    unk0x10:[u8; 16],
+    gaitem_map: [Gaitem; 5120],
+    player_game_data:PlayerGameData,
+    sp_effects:[SPEffect;13],
+    equipped_items_equip_index: EquipmentSlots,
+    active_weapon_slots_and_arm:ActiveWeaponSlotsAndArmStyle,
+    equipped_items_item_id:EquipmentSlots,
+    equipped_items_gaitem_handle:EquipmentSlots,
+    inventory_held:Inventory,
+    equipped_spells:EquippedSpells,
+    equipped_items:EquippedItems,
+    equipped_gestures:EquippedGestures,
+    acquired_projectiles:AcquiredProjectiles,
+    equipped_armaments_and_items:EquippedArmamentsAndItems,
+    equipped_physics:EquippedPhysics,
+    face_data:FaceData,
+    inventory_storage_box:Inventory,
+    gestures:Gestures,
+    unlocked_regions:Regions,
+    horse:RideGameData,
+    control_byte_maybe:u8,
+    blood_stain:BloodStain,
+    unk_gamedataman_0x120:u32,
+    unk_gamedataman_0x88:u32,
+    menu_profile_save_load:MenuSaveLoad,
+    trophy_equip_data:TrophyEquipData,
+    gaitem_game_data:GaitemGameData,
+    tutorial_data:TutorialData,
+    gameman_0x8c:u8,
+    gameman_0x8d:u8,
+    gameman_0x8e:u8,
+    total_deaths_count:u32,
+    character_type:i32,
+    in_online_session_flag:u8,
+    character_type_online:u32,
+    last_rested_grace:u32,
+    not_alone_flag:u8,
+    in_game_countdown_timer:u32,
+    unk_gamedataman_0x124:u32,
+    event_flags:Vec<u8>, // 1_833_375
+    event_flags_terminator: u8,
+    field_area:FieldArea,
+    world_area:WorldArea,
+    world_geom_man:WorldGeomMan,
+    world_geom_man2:WorldGeomMan,
+    rend_man:RendMan,
+    player_coordinates:PlayerCoordinates,
+    game_man_0x5be:u8,
+    game_man_0x5bf:u8,
+    spawn_point_entity_id:u32,
+    game_man_0xb64:u32,
+    temp_spawn_point_entity_id:u32,
+    game_man_0xcb3:u8,
+    net_man:NetMan,
+    world_area_weather:WorldAreaWeather,
+    world_area_time:WorldAreaTime,
+    base_version:BaseVersion,
+    steam_id:u64,
+    ps5_activity:PS5Activity,
+    dlc:DLC,
+    player_data_hash:PlayerGameDataHash,
+    rest: Vec<u8>,
+}
+
+#[derive(Debug)]
+pub struct Inventory {}
+
+impl Inventory {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct EquippedSpells {}
+
+impl EquippedSpells {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct EquippedItems {}
+
+impl EquippedItems {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct EquippedGestures {}
+
+impl EquippedGestures {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct AcquiredProjectiles {}
+
+impl AcquiredProjectiles {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct EquippedArmamentsAndItems {}
+
+impl EquippedArmamentsAndItems {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct EquippedPhysics {}
+
+impl EquippedPhysics {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct FaceData {}
+
+impl FaceData {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct Gestures {}
+
+impl Gestures {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct Regions {}
+
+impl Regions {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct RideGameData {}
+
+impl RideGameData {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct BloodStain {}
+
+impl BloodStain {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct MenuSaveLoad {}
+
+impl MenuSaveLoad {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct TrophyEquipData {}
+
+impl TrophyEquipData {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct GaitemGameData {}
+
+impl GaitemGameData {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct TutorialData {}
+
+impl TutorialData {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct FieldArea {}
+
+impl FieldArea {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct WorldArea {}
+
+impl WorldArea {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct WorldGeomMan {}
+
+impl WorldGeomMan {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct RendMan {}
+
+impl RendMan {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct PlayerCoordinates {}
+
+impl PlayerCoordinates {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct NetMan {}
+
+impl NetMan {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct WorldAreaWeather {}
+
+impl WorldAreaWeather {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct WorldAreaTime {}
+
+impl WorldAreaTime {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct BaseVersion {}
+
+impl BaseVersion {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct PS5Activity {}
+
+impl PS5Activity {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct DLC {}
+
+impl DLC {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug)]
+pub struct PlayerGameDataHash {}
+
+impl PlayerGameDataHash {
+    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {})
     }
 }
