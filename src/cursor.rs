@@ -17,9 +17,22 @@ impl<R: Read> CursorReader<R> {
     }
 
     pub fn read_exact(&mut self, buffer: &mut [u8]) -> io::Result<()> {
-        self.inner.read_exact(buffer)?;
-        self.offset += buffer.len() as u64;
-        Ok(())
+        let start = self.offset;
+        let requested = buffer.len();
+
+        match self.inner.read_exact(buffer) {
+            Ok(()) => {
+                self.offset += requested as u64;
+                Ok(())
+            }
+            Err(error) => Err(io::Error::new(
+                error.kind(),
+                format!(
+                    "read_exact failed at offset {}, requested {} bytes: {}",
+                    start, requested, error
+                ),
+            )),
+        }
     }
 
     pub fn read_u64_le(&mut self) -> io::Result<u64> {
@@ -153,16 +166,17 @@ impl<R: Read> CursorReader<R> {
     }
 
     pub fn read_utf16_le_to_string(&mut self, char_count: usize) -> io::Result<String> {
-        let mut u8_buffer = Vec::with_capacity(char_count / 8);
+        let byte_count = char_count * 2;
 
-        self.read_exact(&mut u8_buffer)?;
+        let mut bytes = vec![0u8; byte_count];
+        self.read_exact(&mut bytes)?;
 
-        let u16_buffer: Vec<u16> = u8_buffer
+        let code_units: Vec<u16> = bytes
             .chunks_exact(2)
             .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
             .collect();
 
-        Ok(String::from_utf16_lossy(&u16_buffer))
+        Ok(String::from_utf16_lossy(&code_units))
     }
 
     pub fn discard(&mut self, mut count: usize) -> io::Result<()> {

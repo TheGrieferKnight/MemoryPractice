@@ -2,10 +2,7 @@
 
 use std::io::{self, Read};
 
-use crate::{
-    constants::*,
-    cursor::CursorReader,
-};
+use crate::{constants::*, cursor::CursorReader};
 
 #[derive(Debug, Default)]
 pub struct Gaitem {
@@ -328,9 +325,9 @@ pub struct CharacterSlot {
     acquired_projectiles: AcquiredProjectiles,
     equipped_armaments_and_items: EquippedArmamentsAndItems,
     equipped_physics: EquippedPhysics,
-    face_data: FaceData,
+    face_data: [u8; 303],
     inventory_storage_box: Inventory,
-    gestures: Gestures,
+    gestures: Vec<u32>,
     unlocked_regions: Regions,
     horse: RideGameData,
     control_byte_maybe: u8,
@@ -462,6 +459,16 @@ impl CharacterSlot {
         Ok(unk0x10)
     }
 
+    pub fn read_gestures<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<u32>> {
+        let mut gestures: Vec<u32> = Vec::with_capacity(GESTURES);
+
+        for _ in 0..GESTURES {
+            gestures.push(cursor.read_u32_le()?)
+        }
+
+        Ok(gestures)
+    }
+
     pub fn read_equipped_gestures<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<u32>> {
         let mut equipped_gestures: Vec<u32> = Vec::with_capacity(EQUIPPED_GESTURES);
 
@@ -492,9 +499,9 @@ impl CharacterSlot {
             acquired_projectiles: AcquiredProjectiles::read(cursor)?,
             equipped_armaments_and_items: EquippedArmamentsAndItems::read(cursor)?,
             equipped_physics: EquippedPhysics::read(cursor)?,
-            face_data: FaceData::read(cursor)?,
+            face_data: Self::read_face_data(cursor)?,
             inventory_storage_box: Inventory::read_inventory_storage(cursor)?,
-            gestures: Gestures::read(cursor)?,
+            gestures: Self::read_gestures(cursor)?,
             unlocked_regions: Regions::read(cursor)?,
             horse: RideGameData::read(cursor)?,
             control_byte_maybe: cursor.read_u8_le()?,
@@ -540,6 +547,14 @@ impl CharacterSlot {
             player_data_hash: PlayerGameDataHash::read(cursor)?,
             rest: Vec::new(),
         })
+    }
+
+    fn read_face_data<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 303]> {
+        let mut buffer = [0u8; 303];
+
+        cursor.read_exact(&mut buffer);
+
+        Ok(buffer)
     }
 }
 
@@ -831,47 +846,80 @@ impl EquippedArmamentsAndItems {
 }
 
 #[derive(Debug)]
-pub struct EquippedPhysics {}
+pub struct EquippedPhysics {
+    slot1: u32,
+    slot2: u32,
+    unk0x8: u32,
+}
 
 impl EquippedPhysics {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            slot1: cursor.read_u32_le()?,
+            slot2: cursor.read_u32_le()?,
+            unk0x8: cursor.read_u32_le()?,
+        })
     }
 }
 
 #[derive(Debug)]
-pub struct FaceData {}
-
-impl FaceData {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
-    }
+pub struct Regions {
+    count: u32,
+    region_ids: Vec<u32>,
 }
-
-#[derive(Debug)]
-pub struct Gestures {}
-
-impl Gestures {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
-    }
-}
-
-#[derive(Debug)]
-pub struct Regions {}
 
 impl Regions {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        let count: u32 = cursor.read_u32_le()?;
+
+        let mut region_ids: Vec<u32> = Vec::with_capacity(count as usize);
+
+        for _ in 0..count {
+            region_ids.push(cursor.read_u32_le()?);
+        }
+
+        Ok(Self { count, region_ids })
     }
 }
 
 #[derive(Debug)]
-pub struct RideGameData {}
+pub struct RideGameData {
+    coordinates: Vec<f32>,
+    map_id: u32,
+    angle: Vec<f32>,
+    hp: i32,
+    state: u32,
+}
 
 impl RideGameData {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    fn read_coordinates<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<f32>> {
+        let mut coordinates: Vec<f32> = Vec::with_capacity(3);
+
+        for _ in 0..3 {
+            coordinates.push(cursor.read_f32_le()?);
+        }
+
+        Ok(coordinates)
+    }
+
+    fn read_angles<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<f32>> {
+        let mut angles: Vec<f32> = Vec::with_capacity(4);
+
+        for _ in 0..4 {
+            angles.push(cursor.read_f32_le()?);
+        }
+
+        Ok(angles)
+    }
+
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            coordinates: Self::read_coordinates(cursor)?,
+            map_id: cursor.read_u32_le()?,
+            angle: Self::read_angles(cursor)?,
+            hp: cursor.read_i32_le()?,
+            state: cursor.read_u32_le()?,
+        })
     }
 }
 

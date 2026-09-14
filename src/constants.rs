@@ -36,3 +36,4 @@ pub const EQUIPPED_POUCH_ITEMS: usize = 10;
 
 // CharacterSlot in types.rs
 pub const EQUIPPED_GESTURES: usize = 6;
+pub const GESTURES: usize = 64;
