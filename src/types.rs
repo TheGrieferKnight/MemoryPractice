@@ -807,8 +807,26 @@ pub struct EquippedArmamentsAndItems {
 }
 
 impl EquippedArmamentsAndItems {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            quickitem1: cursor.read_u32_le()?,
+            quickitem2: cursor.read_u32_le()?,
+            quickitem3: cursor.read_u32_le()?,
+            quickitem4: cursor.read_u32_le()?,
+            quickitem5: cursor.read_u32_le()?,
+            quickitem6: cursor.read_u32_le()?,
+            quickitem7: cursor.read_u32_le()?,
+            quickitem8: cursor.read_u32_le()?,
+            quickitem9: cursor.read_u32_le()?,
+            quickitem10: cursor.read_u32_le()?,
+            pouch1: cursor.read_u32_le()?,
+            pouch2: cursor.read_u32_le()?,
+            pouch3: cursor.read_u32_le()?,
+            pouch4: cursor.read_u32_le()?,
+            pouch5: cursor.read_u32_le()?,
+            pouch6: cursor.read_u32_le()?,
+            unk0x98: cursor.read_u32_le()?,
+        })
     }
 }
 
