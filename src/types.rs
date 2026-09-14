@@ -557,15 +557,11 @@ impl Inventory {
     }
 
     pub fn read_inventory_storage<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        let common_items_storage = Self::read_common_items_storage(cursor)?;
-
-        let key_items_storage = Self::read_key_items_storage(cursor)?;
-
         Ok(Self {
-            common_item_count: common_items_storage.len() as u32,
-            common_items: common_items_storage,
-            key_item_count: key_items_storage.len() as u32,
-            key_items: key_items_storage,
+            common_item_count: cursor.read_u32_le()?,
+            common_items: Self::read_common_items_storage(cursor)?,
+            key_item_count: cursor.read_u32_le()?,
+            key_items: Self::read_key_items_storage(cursor)?,
             equip_index_counter: cursor.read_u32_le()?,
             acquisition_index_counter: cursor.read_u32_le()?,
         })
@@ -578,17 +574,9 @@ impl Inventory {
             Vec::with_capacity(con::INVENTORY_HELD_COMMON_SLOT_COUNT);
 
         for _ in 0..con::INVENTORY_HELD_COMMON_SLOT_COUNT {
-            let gaitem_handle = cursor.read_u32_le()?;
-            let quantity = cursor.read_u32_le()?;
-            let acquisition_index = cursor.read_u32_le()?;
 
-            if gaitem_handle + quantity + acquisition_index != 0 {
-                common_items_held.push(InventoryItem {
-                    gaitem_handle,
-                    quantity,
-                    acquisition_index,
-                })
-            }
+                common_items_held.push(InventoryItem::read(cursor)?)
+
         }
 
         Ok(common_items_held)
@@ -601,17 +589,9 @@ impl Inventory {
             Vec::with_capacity(con::INVENTORY_STORAGE_COMMON_SLOT_COUNT);
 
         for _ in 0..con::INVENTORY_STORAGE_COMMON_SLOT_COUNT {
-            let gaitem_handle = cursor.read_u32_le()?;
-            let quantity = cursor.read_u32_le()?;
-            let acquisition_index = cursor.read_u32_le()?;
 
-            if gaitem_handle + quantity + acquisition_index != 0 {
-                common_items_storage.push(InventoryItem {
-                    gaitem_handle,
-                    quantity,
-                    acquisition_index,
-                })
-            }
+                common_items_storage.push(InventoryItem::read(cursor)?)
+
         }
 
         Ok(common_items_storage)
@@ -624,17 +604,7 @@ impl Inventory {
             Vec::with_capacity(con::INVENTORY_HELD_KEY_SLOT_COUNT);
 
         for _ in 0..con::INVENTORY_HELD_KEY_SLOT_COUNT {
-            let gaitem_handle = cursor.read_u32_le()?;
-            let quantity = cursor.read_u32_le()?;
-            let acquisition_index = cursor.read_u32_le()?;
-
-            if gaitem_handle + quantity + acquisition_index != 0 {
-                key_items_held.push(InventoryItem {
-                    gaitem_handle,
-                    quantity,
-                    acquisition_index,
-                })
-            }
+            key_items_held.push(InventoryItem::read(cursor)?)
         }
 
         Ok(key_items_held)
@@ -647,17 +617,7 @@ impl Inventory {
             Vec::with_capacity(con::INVENTORY_STORAGE_KEY_SLOT_COUNT);
 
         for _ in 0..con::INVENTORY_STORAGE_KEY_SLOT_COUNT {
-            let gaitem_handle = cursor.read_u32_le()?;
-            let quantity = cursor.read_u32_le()?;
-            let acquisition_index = cursor.read_u32_le()?;
-
-            if gaitem_handle + quantity + acquisition_index != 0 {
-                key_items_storage.push(InventoryItem {
-                    gaitem_handle,
-                    quantity,
-                    acquisition_index,
-                })
-            }
+            key_items_storage.push(InventoryItem::read(cursor)?)
         }
 
         Ok(key_items_storage)
@@ -669,6 +629,12 @@ pub struct InventoryItem {
     gaitem_handle: u32,
     quantity: u32,
     acquisition_index: u32,
+}
+
+impl InventoryItem {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self { gaitem_handle: cursor.read_u32_le()?, quantity: cursor.read_u32_le()?, acquisition_index: cursor.read_u32_le()? })
+    }
 }
 
 #[derive(Debug)]
