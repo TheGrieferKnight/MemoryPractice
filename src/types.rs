@@ -676,11 +676,62 @@ impl EquippedSpells {
 }
 
 #[derive(Debug)]
-pub struct EquippedItems {}
+pub struct Spell {
+    spell_id: u32,
+    unk0x4: u32,
+}
+
+impl Spell {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            spell_id: cursor.read_u32_le()?,
+            unk0x4: cursor.read_u32_le()?,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct EquippedItems {
+    quick_items: Vec<EquippedItem>,
+    active_quick_item_index: u32,
+    pouch_items: Vec<EquippedItem>,
+    unk0x84: u32,
+    unk0x88: u32,
+}
 
 impl EquippedItems {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            quick_items: Self::read_quick_items(cursor)?,
+            active_quick_item_index: cursor.read_u32_le()?,
+            pouch_items: Self::read_quick_items(cursor)?,
+            unk0x84: cursor.read_u32_le()?,
+            unk0x88: cursor.read_u32_le()?,
+        })
+    }
+
+    pub fn read_quick_items<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Vec<EquippedItem>> {
+        let mut quick_items: Vec<EquippedItem> = Vec::with_capacity(EQUIPPED_QUICK_ITEMS);
+
+        for _ in 0..EQUIPPED_QUICK_ITEMS {
+            quick_items.push(EquippedItem::read(cursor)?);
+        }
+
+        Ok(quick_items)
+    }
+
+    pub fn read_pouch_items<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Vec<EquippedItem>> {
+        let mut pouch_items: Vec<EquippedItem> = Vec::with_capacity(EQUIPPED_POUCH_ITEMS);
+
+        for _ in 0..EQUIPPED_POUCH_ITEMS {
+            pouch_items.push(EquippedItem::read(cursor)?);
+        }
+
+        Ok(pouch_items)
     }
 }
 
