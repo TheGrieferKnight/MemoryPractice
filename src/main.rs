@@ -1,6 +1,6 @@
 use crate::constants as con;
 use crate::cursor::CursorReader;
-use crate::types::{CharacterSlot, PlayerGameData};
+use crate::types::CharacterSlot;
 
 use std::fs::File;
 use std::io::{self, BufReader, Read};
@@ -43,68 +43,6 @@ fn parse_character_slot<R: Read>(
     let character_slot = Box::new(CharacterSlot::read(cursor)?);
 
     println!("{:?}", character_slot.player_game_data);
-
-    // let version = cursor.read_u32_le()?;
-
-    // println!("Version: {:?}", version);
-
-    // let map_id = cursor.read_u32_le()?;
-
-    // println!("Map ID: {:?}", map_id);
-
-    // // Discard unknown bytes for now. Will need to be stored in case of save editing.
-    // cursor.discard(24)?;
-
-    // let item_count = parse_gaitem_map(cursor);
-
-    // println!("Item count: {:?}", item_count);
-
-    // parse_player_game_data(cursor)?;
-
-    // let mut speffect_entry_count: usize = 0;
-
-    // println!();
-
-    // while speffect_entry_count < con::SPEFFECT_ENTRY_COUNT {
-    //     let sp_effect = SPEffect::read(cursor)?;
-
-    //     println!("SP Effect {}: {:?}", speffect_entry_count, sp_effect);
-
-    //     speffect_entry_count += 1;
-    // }
-
-    // let equipped_items_equip_index = EquipmentSlots::read(cursor)?;
-
-    // let active_weapon_slots_and_arm = ActiveWeaponSlotsAndArmStyle::read(cursor)?;
-
-    // let equipped_items_item_id = EquipmentSlots::read(cursor)?;
-
-    // let equipped_items_gaitem_handle = EquipmentSlots::read(cursor)?;
-
-    // println!(
-    //     "Equipped Item Equip Index: {:?}",
-    //     equipped_items_equip_index
-    // );
-
-    // println!(
-    //     "Active Weapon Slots and Arm: {:?}",
-    //     active_weapon_slots_and_arm
-    // );
-
-    // println!("Equipped Items Item ID: {:?}", equipped_items_item_id);
-
-    // println!(
-    //     "Equipped Items Gaitem Handle: {:?}",
-    //     equipped_items_gaitem_handle
-    // );
-
-    Ok(())
-}
-
-fn parse_player_game_data<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<()> {
-    let player_game_data = PlayerGameData::read(cursor)?;
-
-    print!("{:?}", player_game_data);
 
     Ok(())
 }

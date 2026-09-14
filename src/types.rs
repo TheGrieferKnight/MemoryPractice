@@ -397,7 +397,7 @@ impl CharacterSlot {
     fn parse_gaitem_map<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Box<[Gaitem; 5120]>> {
         let mut gaitems: Vec<Gaitem> = Vec::with_capacity(5120);
 
-        while gaitems.len() < con::GAITEM_COUNT_NEW {
+        for _ in 0..con::GAITEM_COUNT_NEW {
             let gaitem_handle = cursor.read_u32_le()?;
 
             let item_id = cursor.read_u32_le()?;
@@ -472,7 +472,7 @@ impl CharacterSlot {
             active_weapon_slots_and_arm: ActiveWeaponSlotsAndArmStyle::read(cursor)?,
             equipped_items_item_id: EquipmentSlots::read(cursor)?,
             equipped_items_gaitem_handle: EquipmentSlots::read(cursor)?,
-            inventory_held: Inventory::read(cursor)?,
+            inventory_held: Inventory::read_inventory_held(cursor)?,
             equipped_spells: EquippedSpells::read(cursor)?,
             equipped_items: EquippedItems::read(cursor)?,
             equipped_gestures: EquippedGestures::read(cursor)?,
@@ -480,7 +480,7 @@ impl CharacterSlot {
             equipped_armaments_and_items: EquippedArmamentsAndItems::read(cursor)?,
             equipped_physics: EquippedPhysics::read(cursor)?,
             face_data: FaceData::read(cursor)?,
-            inventory_storage_box: Inventory::read(cursor)?,
+            inventory_storage_box: Inventory::read_inventory_storage(cursor)?,
             gestures: Gestures::read(cursor)?,
             unlocked_regions: Regions::read(cursor)?,
             horse: RideGameData::read(cursor)?,
@@ -530,13 +530,145 @@ impl CharacterSlot {
     }
 }
 
-#[derive(Debug)]
-pub struct Inventory {}
+#[derive(Debug, Default)]
+pub struct Inventory {
+    common_item_count: u32,
+    common_items: Vec<InventoryItem>,
+    key_item_count: u32,
+    key_items: Vec<InventoryItem>,
+    equip_index_counter: u32,
+    acquisition_index_counter: u32,
+}
 
 impl Inventory {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read_inventory_held<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        let common_items_held = Self::read_common_items_held(cursor)?;
+
+        let key_items_held = Self::read_key_items_held(cursor)?;
+
+        Ok(Self {
+            common_item_count: common_items_held.len() as u32,
+            common_items: common_items_held,
+            key_item_count: key_items_held.len() as u32,
+            key_items: key_items_held,
+            equip_index_counter: cursor.read_u32_le()?,
+            acquisition_index_counter: cursor.read_u32_le()?,
+        })
     }
+
+    pub fn read_inventory_storage<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        let common_items_storage = Self::read_common_items_storage(cursor)?;
+
+        let key_items_storage = Self::read_key_items_storage(cursor)?;
+
+        Ok(Self {
+            common_item_count: common_items_storage.len() as u32,
+            common_items: common_items_storage,
+            key_item_count: key_items_storage.len() as u32,
+            key_items: key_items_storage,
+            equip_index_counter: cursor.read_u32_le()?,
+            acquisition_index_counter: cursor.read_u32_le()?,
+        })
+    }
+
+    fn read_common_items_held<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Vec<InventoryItem>> {
+        let mut common_items_held: Vec<InventoryItem> =
+            Vec::with_capacity(con::INVENTORY_HELD_COMMON_SLOT_COUNT);
+
+        for _ in 0..con::INVENTORY_HELD_COMMON_SLOT_COUNT {
+            let gaitem_handle = cursor.read_u32_le()?;
+            let quantity = cursor.read_u32_le()?;
+            let acquisition_index = cursor.read_u32_le()?;
+
+            if gaitem_handle + quantity + acquisition_index != 0 {
+                common_items_held.push(InventoryItem {
+                    gaitem_handle,
+                    quantity,
+                    acquisition_index,
+                })
+            }
+        }
+
+        Ok(common_items_held)
+    }
+
+    fn read_common_items_storage<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Vec<InventoryItem>> {
+        let mut common_items_storage: Vec<InventoryItem> =
+            Vec::with_capacity(con::INVENTORY_STORAGE_COMMON_SLOT_COUNT);
+
+        for _ in 0..con::INVENTORY_STORAGE_COMMON_SLOT_COUNT {
+            let gaitem_handle = cursor.read_u32_le()?;
+            let quantity = cursor.read_u32_le()?;
+            let acquisition_index = cursor.read_u32_le()?;
+
+            if gaitem_handle + quantity + acquisition_index != 0 {
+                common_items_storage.push(InventoryItem {
+                    gaitem_handle,
+                    quantity,
+                    acquisition_index,
+                })
+            }
+        }
+
+        Ok(common_items_storage)
+    }
+
+    fn read_key_items_held<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Vec<InventoryItem>> {
+        let mut key_items_held: Vec<InventoryItem> =
+            Vec::with_capacity(con::INVENTORY_HELD_KEY_SLOT_COUNT);
+
+        for _ in 0..con::INVENTORY_HELD_KEY_SLOT_COUNT {
+            let gaitem_handle = cursor.read_u32_le()?;
+            let quantity = cursor.read_u32_le()?;
+            let acquisition_index = cursor.read_u32_le()?;
+
+            if gaitem_handle + quantity + acquisition_index != 0 {
+                key_items_held.push(InventoryItem {
+                    gaitem_handle,
+                    quantity,
+                    acquisition_index,
+                })
+            }
+        }
+
+        Ok(key_items_held)
+    }
+
+    fn read_key_items_storage<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Vec<InventoryItem>> {
+        let mut key_items_storage: Vec<InventoryItem> =
+            Vec::with_capacity(con::INVENTORY_STORAGE_KEY_SLOT_COUNT);
+
+        for _ in 0..con::INVENTORY_STORAGE_KEY_SLOT_COUNT {
+            let gaitem_handle = cursor.read_u32_le()?;
+            let quantity = cursor.read_u32_le()?;
+            let acquisition_index = cursor.read_u32_le()?;
+
+            if gaitem_handle + quantity + acquisition_index != 0 {
+                key_items_storage.push(InventoryItem {
+                    gaitem_handle,
+                    quantity,
+                    acquisition_index,
+                })
+            }
+        }
+
+        Ok(key_items_storage)
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct InventoryItem {
+    gaitem_handle: u32,
+    quantity: u32,
+    acquisition_index: u32,
 }
 
 #[derive(Debug)]
@@ -764,6 +896,7 @@ impl PS5Activity {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug)]
 pub struct DLC {}
 
