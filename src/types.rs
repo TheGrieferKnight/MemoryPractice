@@ -736,11 +736,17 @@ impl EquippedItems {
 }
 
 #[derive(Debug)]
-pub struct EquippedGestures {}
+pub struct EquippedItem {
+    gaitem_handle: u32,
+    equip_index: u32,
+}
 
-impl EquippedGestures {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+impl EquippedItem {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(EquippedItem {
+            gaitem_handle: cursor.read_u32_le()?,
+            equip_index: cursor.read_u32_le()?,
+        })
     }
 }
 
