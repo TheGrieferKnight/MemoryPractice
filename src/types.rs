@@ -924,11 +924,57 @@ impl RideGameData {
 }
 
 #[derive(Debug)]
-pub struct BloodStain {}
+pub struct BloodStain {
+    coordinates: Vec<f32>,
+    angle: Vec<f32>,
+    unk0x1c: u32,
+    unk0x20: u32,
+    unk0x24: u32,
+    unk0x28: u32,
+    unk0x2c: u32,
+    unk0x30: u32,
+    runes: u32,
+    map_id: u32,
+    unk0x3c: u32,
+    unk0x38: u32,
+}
 
 impl BloodStain {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    fn read_coordinates<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<f32>> {
+        let mut coordinates: Vec<f32> = Vec::with_capacity(3);
+
+        for _ in 0..3 {
+            coordinates.push(cursor.read_f32_le()?);
+        }
+
+        Ok(coordinates)
+    }
+
+    fn read_angles<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<f32>> {
+        let mut angles: Vec<f32> = Vec::with_capacity(4);
+
+        for _ in 0..4 {
+            angles.push(cursor.read_f32_le()?);
+        }
+
+        Ok(angles)
+    }
+
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            coordinates: Self::read_coordinates(cursor)?,
+            angle: Self::read_angles(cursor)?,
+            unk0x1c: cursor.read_u32_le()?,
+            unk0x20: cursor.read_u32_le()?,
+            unk0x24: cursor.read_u32_le()?,
+            unk0x28: cursor.read_u32_le()?,
+            unk0x2c: cursor.read_u32_le()?,
+            unk0x30: cursor.read_u32_le()?,
+            runes: cursor.read_u32_le()?,
+            map_id: cursor.read_u32_le()?,
+            unk0x3c: cursor.read_u32_le()?,
+            unk0x38: cursor.read_u32_le()?,
+        })
     }
 }
 
