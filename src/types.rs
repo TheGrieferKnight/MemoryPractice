@@ -2,7 +2,10 @@
 
 use std::io::{self, Read};
 
-use crate::{constants as con, cursor::CursorReader};
+use crate::{
+    constants::*,
+    cursor::CursorReader,
+};
 
 #[derive(Debug, Default)]
 pub struct Gaitem {
@@ -321,7 +324,7 @@ pub struct CharacterSlot {
     inventory_held: Inventory,
     equipped_spells: EquippedSpells,
     equipped_items: EquippedItems,
-    equipped_gestures: EquippedGestures,
+    equipped_gestures: Vec<u32>,
     acquired_projectiles: AcquiredProjectiles,
     equipped_armaments_and_items: EquippedArmamentsAndItems,
     equipped_physics: EquippedPhysics,
@@ -397,7 +400,7 @@ impl CharacterSlot {
     fn parse_gaitem_map<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Box<[Gaitem; 5120]>> {
         let mut gaitems: Vec<Gaitem> = Vec::with_capacity(5120);
 
-        for _ in 0..con::GAITEM_COUNT_NEW {
+        for _ in 0..GAITEM_COUNT_NEW {
             let gaitem_handle = cursor.read_u32_le()?;
 
             let item_id = cursor.read_u32_le()?;
@@ -459,6 +462,16 @@ impl CharacterSlot {
         Ok(unk0x10)
     }
 
+    pub fn read_equipped_gestures<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<u32>> {
+        let mut equipped_gestures: Vec<u32> = Vec::with_capacity(EQUIPPED_GESTURES);
+
+        for _ in 0..EQUIPPED_GESTURES {
+            equipped_gestures.push(cursor.read_u32_le()?)
+        }
+
+        Ok(equipped_gestures)
+    }
+
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
         Ok(Self {
             version: cursor.read_u32_le()?,
@@ -475,7 +488,7 @@ impl CharacterSlot {
             inventory_held: Inventory::read_inventory_held(cursor)?,
             equipped_spells: EquippedSpells::read(cursor)?,
             equipped_items: EquippedItems::read(cursor)?,
-            equipped_gestures: EquippedGestures::read(cursor)?,
+            equipped_gestures: Self::read_equipped_gestures(cursor)?,
             acquired_projectiles: AcquiredProjectiles::read(cursor)?,
             equipped_armaments_and_items: EquippedArmamentsAndItems::read(cursor)?,
             equipped_physics: EquippedPhysics::read(cursor)?,
@@ -571,12 +584,10 @@ impl Inventory {
         cursor: &mut CursorReader<R>,
     ) -> io::Result<Vec<InventoryItem>> {
         let mut common_items_held: Vec<InventoryItem> =
-            Vec::with_capacity(con::INVENTORY_HELD_COMMON_SLOT_COUNT);
+            Vec::with_capacity(INVENTORY_HELD_COMMON_SLOT_COUNT);
 
-        for _ in 0..con::INVENTORY_HELD_COMMON_SLOT_COUNT {
-
-                common_items_held.push(InventoryItem::read(cursor)?)
-
+        for _ in 0..INVENTORY_HELD_COMMON_SLOT_COUNT {
+            common_items_held.push(InventoryItem::read(cursor)?)
         }
 
         Ok(common_items_held)
@@ -586,12 +597,10 @@ impl Inventory {
         cursor: &mut CursorReader<R>,
     ) -> io::Result<Vec<InventoryItem>> {
         let mut common_items_storage: Vec<InventoryItem> =
-            Vec::with_capacity(con::INVENTORY_STORAGE_COMMON_SLOT_COUNT);
+            Vec::with_capacity(INVENTORY_STORAGE_COMMON_SLOT_COUNT);
 
-        for _ in 0..con::INVENTORY_STORAGE_COMMON_SLOT_COUNT {
-
-                common_items_storage.push(InventoryItem::read(cursor)?)
-
+        for _ in 0..INVENTORY_STORAGE_COMMON_SLOT_COUNT {
+            common_items_storage.push(InventoryItem::read(cursor)?)
         }
 
         Ok(common_items_storage)
@@ -601,9 +610,9 @@ impl Inventory {
         cursor: &mut CursorReader<R>,
     ) -> io::Result<Vec<InventoryItem>> {
         let mut key_items_held: Vec<InventoryItem> =
-            Vec::with_capacity(con::INVENTORY_HELD_KEY_SLOT_COUNT);
+            Vec::with_capacity(INVENTORY_HELD_KEY_SLOT_COUNT);
 
-        for _ in 0..con::INVENTORY_HELD_KEY_SLOT_COUNT {
+        for _ in 0..INVENTORY_HELD_KEY_SLOT_COUNT {
             key_items_held.push(InventoryItem::read(cursor)?)
         }
 
@@ -614,9 +623,9 @@ impl Inventory {
         cursor: &mut CursorReader<R>,
     ) -> io::Result<Vec<InventoryItem>> {
         let mut key_items_storage: Vec<InventoryItem> =
-            Vec::with_capacity(con::INVENTORY_STORAGE_KEY_SLOT_COUNT);
+            Vec::with_capacity(INVENTORY_STORAGE_KEY_SLOT_COUNT);
 
-        for _ in 0..con::INVENTORY_STORAGE_KEY_SLOT_COUNT {
+        for _ in 0..INVENTORY_STORAGE_KEY_SLOT_COUNT {
             key_items_storage.push(InventoryItem::read(cursor)?)
         }
 
@@ -633,16 +642,36 @@ pub struct InventoryItem {
 
 impl InventoryItem {
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self { gaitem_handle: cursor.read_u32_le()?, quantity: cursor.read_u32_le()?, acquisition_index: cursor.read_u32_le()? })
+        Ok(Self {
+            gaitem_handle: cursor.read_u32_le()?,
+            quantity: cursor.read_u32_le()?,
+            acquisition_index: cursor.read_u32_le()?,
+        })
     }
 }
 
 #[derive(Debug)]
-pub struct EquippedSpells {}
+pub struct EquippedSpells {
+    spell_slots: Vec<Spell>,
+    active_index: u32,
+}
 
 impl EquippedSpells {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            spell_slots: Self::read_spell(cursor)?,
+            active_index: cursor.read_u32_le()?,
+        })
+    }
+
+    fn read_spell<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<Spell>> {
+        let mut spells: Vec<Spell> = Vec::with_capacity(EQUIPPED_SPELL_COUNT);
+
+        for _ in 0..EQUIPPED_SPELL_COUNT {
+            spells.push(Spell::read(cursor)?)
+        }
+
+        Ok(spells)
     }
 }
 

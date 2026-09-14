@@ -21,7 +21,18 @@ pub const GAITEM_COUNT_NEW: usize = 5120;
 
 pub const SPEFFECT_ENTRY_COUNT: usize = 13;
 
+// Inventory and InventoryItem in types.rs
 pub const INVENTORY_HELD_COMMON_SLOT_COUNT: usize = 0xA80;
 pub const INVENTORY_STORAGE_COMMON_SLOT_COUNT: usize = 0x780;
 pub const INVENTORY_HELD_KEY_SLOT_COUNT: usize = 0x180;
 pub const INVENTORY_STORAGE_KEY_SLOT_COUNT: usize = 0x80;
+
+// EquippedSpells in types.rs
+pub const EQUIPPED_SPELL_COUNT: usize = 14;
+
+// EquippedItems in types.rs
+pub const EQUIPPED_QUICK_ITEMS: usize = 10;
+pub const EQUIPPED_POUCH_ITEMS: usize = 10;
+
+// CharacterSlot in types.rs
+pub const EQUIPPED_GESTURES: usize = 6;
