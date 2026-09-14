@@ -751,16 +751,60 @@ impl EquippedItem {
 }
 
 #[derive(Debug)]
-pub struct AcquiredProjectiles {}
+pub struct AcquiredProjectiles {
+    count: u32,
+    projectiles: Vec<Projectile>,
+}
 
 impl AcquiredProjectiles {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        let count: u32 = cursor.read_u32_le()?;
+
+        let mut projectiles: Vec<Projectile> = Vec::with_capacity(count as usize);
+
+        for _ in 0..count {
+            projectiles.push(Projectile::read(cursor)?);
+        }
+
+        Ok(Self { count, projectiles })
     }
 }
 
 #[derive(Debug)]
-pub struct EquippedArmamentsAndItems {}
+pub struct Projectile {
+    id: u32,
+    unk0x4: u32,
+}
+
+impl Projectile {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            id: cursor.read_u32_le()?,
+            unk0x4: cursor.read_u32_le()?,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct EquippedArmamentsAndItems {
+    quickitem1: u32,
+    quickitem2: u32,
+    quickitem3: u32,
+    quickitem4: u32,
+    quickitem5: u32,
+    quickitem6: u32,
+    quickitem7: u32,
+    quickitem8: u32,
+    quickitem9: u32,
+    quickitem10: u32,
+    pouch1: u32,
+    pouch2: u32,
+    pouch3: u32,
+    pouch4: u32,
+    pouch5: u32,
+    pouch6: u32,
+    unk0x98: u32,
+}
 
 impl EquippedArmamentsAndItems {
     pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
