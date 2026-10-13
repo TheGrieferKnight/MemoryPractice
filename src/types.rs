@@ -1268,11 +1268,27 @@ impl PlayerCoordinates {
 }
 
 #[derive(Debug)]
-pub struct NetMan {}
+pub struct NetMan {
+    unk0x0: u32,
+    data: Box<[u8; 0x20_000]>,
+}
 
 impl NetMan {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            unk0x0: cursor.read_u32_le()?,
+            data: Self::read_data(cursor)?,
+        })
+    }
+
+    pub fn read_data<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Box<[u8; 0x20_000]>> {
+        let mut data = vec![0u8; 0x20_000 as usize];
+
+        cursor.read_exact(&mut data)?;
+
+        data.into_boxed_slice()
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "entries len"))
     }
 }
 
