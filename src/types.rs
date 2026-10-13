@@ -1301,7 +1301,7 @@ pub struct WorldAreaWeather {
 }
 
 impl WorldAreaWeather {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
         Ok(Self {
             area_id: cursor.read_u16_le()?,
             weather_type: cursor.read_u16_le()?,
@@ -1329,38 +1329,108 @@ impl WorldAreaTime {
 }
 
 #[derive(Debug)]
-pub struct BaseVersion {}
+pub struct BaseVersion {
+    base_version_copy: u32,
+    base_version: u32,
+    is_latest_version: u32,
+    unk0xc: u32,
+}
 
 impl BaseVersion {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            base_version_copy: cursor.read_u32_le()?,
+            base_version: cursor.read_u32_le()?,
+            is_latest_version: cursor.read_u32_le()?,
+            unk0xc: cursor.read_u32_le()?,
+        })
     }
 }
 
 #[derive(Debug)]
-pub struct PS5Activity {}
+pub struct PS5Activity {
+    data: [u8; 0x20],
+}
 
 impl PS5Activity {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        let mut data = [0u8; 0x20 as usize];
+
+        cursor.read_exact(&mut data)?;
+
+        Ok(Self { data })
     }
 }
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug)]
-pub struct DLC {}
+pub struct DLC {
+    preorder_the_ring: u8,
+    shadow_of_the_erdtree: u8,
+    preorder_ring_of_miquella: u8,
+    tarnished_pack: u8,
+    unused: [u8; 46],
+}
 
 impl DLC {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            preorder_the_ring: cursor.read_u8_le()?,
+            shadow_of_the_erdtree: cursor.read_u8_le()?,
+            preorder_ring_of_miquella: cursor.read_u8_le()?,
+            tarnished_pack: cursor.read_u8_le()?,
+            unused: Self::read_unused(cursor)?,
+        })
+    }
+
+    pub fn read_unused<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 46]> {
+        let mut unused = [0u8; 46 as usize];
+
+        cursor.read_exact(&mut unused)?;
+
+        Ok(unused)
     }
 }
 
 #[derive(Debug)]
-pub struct PlayerGameDataHash {}
+pub struct PlayerGameDataHash {
+    leve: u32,
+    stats: u32,
+    archetype: u32,
+    playergame_data_0xc0: u32,
+    padding: u32,
+    runes: u32,
+    runes_memory: u32,
+    equipped_weapons: u32,
+    equipped_armors_and_talismans: u32,
+    equipped_items: u32,
+    equipped_spells: u32,
+    rest: [u8; 0x54],
+}
 
 impl PlayerGameDataHash {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            leve: cursor.read_u32_le()?,
+            stats: cursor.read_u32_le()?,
+            archetype: cursor.read_u32_le()?,
+            playergame_data_0xc0: cursor.read_u32_le()?,
+            padding: cursor.read_u32_le()?,
+            runes: cursor.read_u32_le()?,
+            runes_memory: cursor.read_u32_le()?,
+            equipped_weapons: cursor.read_u32_le()?,
+            equipped_armors_and_talismans: cursor.read_u32_le()?,
+            equipped_items: cursor.read_u32_le()?,
+            equipped_spells: cursor.read_u32_le()?,
+            rest: Self::read_rest(cursor)?,
+        })
+    }
+
+    pub fn read_rest<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 0x54]> {
+        let mut rest = [0u8; 0x54 as usize];
+
+        cursor.read_exact(&mut rest)?;
+
+        Ok(rest)
     }
 }
