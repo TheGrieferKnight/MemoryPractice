@@ -1293,20 +1293,38 @@ impl NetMan {
 }
 
 #[derive(Debug)]
-pub struct WorldAreaWeather {}
+pub struct WorldAreaWeather {
+    area_id: u16,
+    weather_type: u16,
+    timer: u32,
+    padding: u32,
+}
 
 impl WorldAreaWeather {
     pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+        Ok(Self {
+            area_id: cursor.read_u16_le()?,
+            weather_type: cursor.read_u16_le()?,
+            timer: cursor.read_u32_le()?,
+            padding: cursor.read_u32_le()?,
+        })
     }
 }
 
 #[derive(Debug)]
-pub struct WorldAreaTime {}
+pub struct WorldAreaTime {
+    hour: u32,
+    minute: u32,
+    second: u32,
+}
 
 impl WorldAreaTime {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            hour: cursor.read_u32_le()?,
+            minute: cursor.read_u32_le()?,
+            second: cursor.read_u32_le()?,
+        })
     }
 }
 
