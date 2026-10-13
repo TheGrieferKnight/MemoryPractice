@@ -2,7 +2,10 @@
 
 use std::io::{self, Read};
 
-use crate::{constants::*, cursor::CursorReader};
+use crate::{
+    constants::*,
+    cursor::{self, CursorReader},
+};
 
 #[derive(Debug, Default)]
 pub struct Gaitem {
@@ -979,20 +982,52 @@ impl BloodStain {
 }
 
 #[derive(Debug)]
-pub struct MenuSaveLoad {}
+pub struct MenuSaveLoad {
+    unk0x0: u16,
+    unk0x2: u16,
+    size: u32,
+    data: Vec<u8>,
+}
 
 impl MenuSaveLoad {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read_data<R: Read>(cursor: &mut CursorReader<R>, size: u32) -> io::Result<Vec<u8>> {
+        let size = if size > 0x10000 { 0x1000 } else { size };
+        let mut v = vec![0u8; size as usize];
+        cursor.read_exact(&mut v)?;
+        Ok(v)
+    }
+
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        let unk0x0 = cursor.read_u16_le()?;
+        let unk0x2 = cursor.read_u16_le()?;
+        let size = cursor.read_u32_le()?;
+        let data = Self::read_data(cursor, size)?;
+
+        Ok(Self {
+            unk0x0,
+            unk0x2,
+            size,
+            data,
+        })
     }
 }
 
 #[derive(Debug)]
-pub struct TrophyEquipData {}
+pub struct TrophyEquipData {
+    unk0x0: u16,
+    legendary_weapon: u128,
+    legendary_goods: u128,
+    legendary_talismans: u128,
+}
 
 impl TrophyEquipData {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            unk0x0: cursor.read_u16_le()?,
+            legendary_weapon: cursor.read_u128_le()?,
+            legendary_goods: cursor.read_u128_le()?,
+            legendary_talismans: cursor.read_u128_le()?,
+        })
     }
 }
 
