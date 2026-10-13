@@ -35,6 +35,12 @@ impl<R: Read> CursorReader<R> {
         }
     }
 
+    pub fn read_u128_le(&mut self) -> io::Result<u128> {
+        let mut bytes = [0u8; 16];
+        self.read_exact(&mut bytes)?;
+        Ok(u128::from_le_bytes(bytes))
+    }
+
     pub fn read_u64_le(&mut self) -> io::Result<u64> {
         let mut bytes = [0u8; 8];
         self.read_exact(&mut bytes)?;
@@ -57,6 +63,12 @@ impl<R: Read> CursorReader<R> {
         let mut bytes = [0u8; 1];
         self.read_exact(&mut bytes)?;
         Ok(u8::from_le_bytes(bytes))
+    }
+
+    pub fn read_u128_be(&mut self) -> io::Result<u128> {
+        let mut bytes = [0u8; 16];
+        self.read_exact(&mut bytes)?;
+        Ok(u128::from_be_bytes(bytes))
     }
 
     pub fn read_u64_be(&mut self) -> io::Result<u64> {
