@@ -2,10 +2,7 @@
 
 use std::io::{self, Read};
 
-use crate::{
-    constants::*,
-    cursor::{self, CursorReader},
-};
+use crate::{constants::*, cursor::CursorReader};
 
 #[derive(Debug, Default)]
 pub struct Gaitem {
@@ -1519,6 +1516,7 @@ impl PlayerGameDataHash {
     }
 }
 
+#[allow(non_camel_case_types, non_snake_case)]
 #[derive(Debug)]
 pub struct USER_DATA_10 {
     MD5: u128,
@@ -1527,11 +1525,83 @@ pub struct USER_DATA_10 {
     settings: Settings,
     menu_system_save_load: MenuSystemSaveLoad,
     profile_summary: ProfileSummary,
+    pc_option_data: Box<[u8; 0xB2]>,
+    key_config_save_load: KeyConfigSaveLoad,
 }
 
 impl USER_DATA_10 {
+    pub fn read_pc_option_data<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Box<[u8; 0xB2]>> {
+        let mut data = vec![0u8; 0xB2 as usize];
+
+        cursor.read_exact(&mut data)?;
+
+        data.into_boxed_slice()
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "netman len"))
+    }
+
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+        let start_pos = cursor.position();
+
+        let MD5 = cursor.read_u128_le()?;
+        let version = cursor.read_u32_le()?;
+        let steam_id = cursor.read_u64_le()?;
+        let settings = Settings::read(cursor)?;
+        let menu_system_save_load = MenuSystemSaveLoad::read(cursor)?;
+        let profile_summary = ProfileSummary::read(cursor)?;
+
+        cursor.discard(5)?;
+
+        let pc_option_data = Self::read_pc_option_data(cursor)?;
+        let key_config_save_load = KeyConfigSaveLoad::read(cursor)?;
+
+        cursor.discard(8)?;
+
+        let bytes_read = cursor.position() - start_pos;
+
+        let remaining = 0x60000 - bytes_read;
+
+        if remaining > 0 {
+            cursor.discard(remaining as usize)?
+        };
+
+        Ok(Self {
+            MD5,
+            version,
+            steam_id,
+            settings,
+            menu_system_save_load,
+            profile_summary,
+            pc_option_data,
+            key_config_save_load,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct KeyConfigSaveLoad {
+    size: u32,
+    data: Vec<u8>,
+}
+
+impl KeyConfigSaveLoad {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        let size = cursor.read_u32_le()?;
+        let data = if size > 0 && size < 0x100000 {
+            Self::read_data(cursor, size)?
+        } else {
+            Vec::new()
+        };
+
+        Ok(Self { size, data })
+    }
+
+    pub fn read_data<R: Read>(cursor: &mut CursorReader<R>, size: u32) -> io::Result<Vec<u8>> {
+        let mut data = vec![0u8; size as usize];
+        cursor.read_exact(&mut data)?;
+        Ok(data)
     }
 }
 
@@ -1553,6 +1623,12 @@ impl MenuSystemSaveLoad {
             .into_boxed_slice()
             .try_into()
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "raw_data len"))
+    }
+
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            raw_data: Self::read_raw_data(cursor)?,
+        })
     }
 }
 
@@ -1990,7 +2066,7 @@ impl FacePreset {
             eye_patch_color_r: cursor.read_u8_le()?,
             eye_patch_color_g: cursor.read_u8_le()?,
             eye_patch_color_b: cursor.read_u8_le()?,
-            pad: cursor.read_u8_le()?,
+            pad: Self::read_pad(cursor)?,
         })
     }
 }
@@ -2082,6 +2158,124 @@ impl Settings {
             unk0x2c: cursor.read_u16_le()?,
             show_tutorials: cursor.read_u8_le()?,
             camera_auto_rotation: cursor.read_u8_le()?,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct ProfileEquipment {
+    raw_data: [u8; 0xE8],
+}
+
+impl ProfileEquipment {
+    pub fn read_raw_data<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 0xE8]> {
+        let mut raw_data = [0u8; 0xE8];
+
+        cursor.read_exact(&mut raw_data)?;
+
+        Ok(raw_data)
+    }
+
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            raw_data: Self::read_raw_data(cursor)?,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct Profile {
+    character_name: String, // (UTF-16LE, 16 chars max)
+    terminator: u16,
+    level: u32,
+    seconds_played: u32,
+    runes_memory: u32,
+    map_id: [u8; 4],
+    place_name_id: u32,
+    face_data: [u8; 0x124],
+    equipment: ProfileEquipment,
+    body_type: u8,
+    archetype: u8,
+    starting_gift: u8,
+    unk_padding: [u8; 7],
+}
+
+impl Profile {
+    pub fn read_map_id<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 4]> {
+        let mut map_id = [0u8; 4];
+
+        cursor.read_exact(&mut map_id)?;
+
+        Ok(map_id)
+    }
+
+    pub fn read_face_data<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 0x124]> {
+        let mut face_data = [0u8; 0x124];
+
+        cursor.read_exact(&mut face_data)?;
+
+        Ok(face_data)
+    }
+
+    pub fn read_unk_padding<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 7]> {
+        let mut unk_padding = [0u8; 7];
+
+        cursor.read_exact(&mut unk_padding)?;
+
+        Ok(unk_padding)
+    }
+
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            character_name: cursor.read_utf16_le_to_string(16)?,
+            terminator: cursor.read_u16_le()?,
+            level: cursor.read_u32_le()?,
+            seconds_played: cursor.read_u32_le()?,
+            runes_memory: cursor.read_u32_le()?,
+            map_id: Self::read_map_id(cursor)?,
+            place_name_id: cursor.read_u32_le()?,
+            face_data: Self::read_face_data(cursor)?,
+            equipment: ProfileEquipment::read(cursor)?,
+            body_type: cursor.read_u8_le()?,
+            archetype: cursor.read_u8_le()?,
+            starting_gift: cursor.read_u8_le()?,
+            unk_padding: Self::read_unk_padding(cursor)?,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct ProfileSummary {
+    active_profiles: [u8; 10],
+    profiles: Box<[Profile; 10]>,
+}
+
+impl ProfileSummary {
+    pub fn read_active_profiles<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 10]> {
+        let mut active_profiles = [0u8; 10];
+
+        cursor.read_exact(&mut active_profiles)?;
+
+        Ok(active_profiles)
+    }
+
+    pub fn read_profiles<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Box<[Profile; 10]>> {
+        let mut profiles: Vec<Profile> = Vec::with_capacity(10);
+
+        for _ in 0..10 {
+            profiles.push(Profile::read(cursor)?);
+        }
+
+        profiles
+            .into_boxed_slice()
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "profiles len"))
+    }
+
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            active_profiles: Self::read_active_profiles(cursor)?,
+            profiles: Self::read_profiles(cursor)?,
         })
     }
 }
