@@ -1158,38 +1158,112 @@ impl FieldArea {
 }
 
 #[derive(Debug)]
-pub struct WorldArea {}
+pub struct WorldArea {
+    size: u32,
+    data: Vec<u8>,
+}
 
 impl WorldArea {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        let size = cursor.read_u32_le()?;
+
+        Ok(Self {
+            size,
+            data: Self::read_data(cursor, size)?,
+        })
+    }
+
+    pub fn read_data<R: Read>(cursor: &mut CursorReader<R>, size: u32) -> io::Result<Vec<u8>> {
+        let mut data = vec![0u8; size as usize];
+        cursor.read_exact(&mut data)?;
+        Ok(data)
     }
 }
 
 #[derive(Debug)]
-pub struct WorldGeomMan {}
+pub struct WorldGeomMan {
+    size: u32,
+    data: Vec<u8>,
+}
 
 impl WorldGeomMan {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        let size = cursor.read_u32_le()?;
+
+        Ok(Self {
+            size,
+            data: Self::read_data(cursor, size)?,
+        })
+    }
+
+    pub fn read_data<R: Read>(cursor: &mut CursorReader<R>, size: u32) -> io::Result<Vec<u8>> {
+        let mut data = vec![0u8; size as usize];
+        cursor.read_exact(&mut data)?;
+        Ok(data)
     }
 }
 
 #[derive(Debug)]
-pub struct RendMan {}
+pub struct RendMan {
+    size: u32,
+    data: Vec<u8>,
+}
 
 impl RendMan {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        let size = cursor.read_u32_le()?;
+
+        Ok(Self {
+            size,
+            data: Self::read_data(cursor, size)?,
+        })
+    }
+
+    pub fn read_data<R: Read>(cursor: &mut CursorReader<R>, size: u32) -> io::Result<Vec<u8>> {
+        let mut data = vec![0u8; size as usize];
+        cursor.read_exact(&mut data)?;
+        Ok(data)
     }
 }
 
 #[derive(Debug)]
-pub struct PlayerCoordinates {}
+pub struct PlayerCoordinates {
+    coordinates: [f32; 3],
+    map_id: u32,
+    angle: [f32; 4],
+    game_man_0xbf0: u8,
+    unk_coordinates: [f32; 3],
+    unk_angle: [f32; 4],
+}
 
 impl PlayerCoordinates {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read_coordinates<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[f32; 3]> {
+        let mut coordinates = [0f32; 3];
+        for i in 0..coordinates.len() {
+            coordinates[i] = cursor.read_f32_le()?;
+        }
+
+        Ok(coordinates)
+    }
+
+    pub fn read_angle<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[f32; 4]> {
+        let mut angles = [0f32; 4];
+        for i in 0..angles.len() {
+            angles[i] = cursor.read_f32_le()?;
+        }
+
+        Ok(angles)
+    }
+
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            coordinates: Self::read_coordinates(cursor)?,
+            map_id: cursor.read_u32_le()?,
+            angle: Self::read_angle(cursor)?,
+            game_man_0xbf0: cursor.read_u8_le()?,
+            unk_coordinates: Self::read_coordinates(cursor)?,
+            unk_angle: Self::read_angle(cursor)?,
+        })
     }
 }
 
