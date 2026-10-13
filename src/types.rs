@@ -1548,7 +1548,11 @@ impl USER_DATA_10 {
         let MD5 = cursor.read_u128_le()?;
         let version = cursor.read_u32_le()?;
         let steam_id = cursor.read_u64_le()?;
+
         let settings = Settings::read(cursor)?;
+
+        cursor.discard((start_pos + 16 + 4 + 8 + 0x140 - cursor.position()) as usize)?;
+
         let menu_system_save_load = MenuSystemSaveLoad::read(cursor)?;
         let profile_summary = ProfileSummary::read(cursor)?;
 
@@ -1561,7 +1565,7 @@ impl USER_DATA_10 {
 
         let bytes_read = cursor.position() - start_pos;
 
-        let remaining = 0x60000 - bytes_read;
+        let remaining = 0x60010u64.saturating_sub(bytes_read);
 
         if remaining > 0 {
             cursor.discard(remaining as usize)?
@@ -1588,6 +1592,7 @@ pub struct KeyConfigSaveLoad {
 
 impl KeyConfigSaveLoad {
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        cursor.discard(4)?;
         let size = cursor.read_u32_le()?;
         let data = if size > 0 && size < 0x100000 {
             Self::read_data(cursor, size)?

@@ -99,9 +99,11 @@ fn main() -> io::Result<()> {
 
     let user_data_10 = USER_DATA_10::read(&mut cursor)?;
 
-    USER_DATA_11::read(&mut cursor)?;
-
     println!("{:#?}", user_data_10);
+
+    USER_DATA_11::read(&mut cursor)?;
+    cursor.read_u128_le()?; // Test if I have reached the EOF
+    cursor.read_u8_le()?; // Test if I have reached the EOF
 
     Ok(())
 }
