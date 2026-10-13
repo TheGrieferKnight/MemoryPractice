@@ -1135,11 +1135,25 @@ impl TutorialDataChunk {
 }
 
 #[derive(Debug)]
-pub struct FieldArea {}
+pub struct FieldArea {
+    size: u32,
+    data: Vec<u8>,
+}
 
 impl FieldArea {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        let size = cursor.read_u32_le()?;
+
+        Ok(Self {
+            size,
+            data: Self::read_data(cursor, size)?,
+        })
+    }
+
+    pub fn read_data<R: Read>(cursor: &mut CursorReader<R>, size: u32) -> io::Result<Vec<u8>> {
+        let mut data = vec![0u8; size as usize];
+        cursor.read_exact(&mut data)?;
+        Ok(data)
     }
 }
 
