@@ -992,9 +992,9 @@ pub struct MenuSaveLoad {
 impl MenuSaveLoad {
     pub fn read_data<R: Read>(cursor: &mut CursorReader<R>, size: u32) -> io::Result<Vec<u8>> {
         let size = if size > 0x10000 { 0x1000 } else { size };
-        let mut v = vec![0u8; size as usize];
-        cursor.read_exact(&mut v)?;
-        Ok(v)
+        let mut data = vec![0u8; size as usize];
+        cursor.read_exact(&mut data)?;
+        Ok(data)
     }
 
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
@@ -1032,11 +1032,55 @@ impl TrophyEquipData {
 }
 
 #[derive(Debug)]
-pub struct GaitemGameData {}
+pub struct GaitemGameData {
+    count: u64,
+    entries: Box<[GaitemGameDataEntry; 14000]>,
+}
 
 impl GaitemGameData {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            count: cursor.read_u64_le()?,
+            entries: Self::read_entries(cursor)?,
+        })
+    }
+
+    pub fn read_entries<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Box<[GaitemGameDataEntry; 14000]>> {
+        let mut entries: Vec<GaitemGameDataEntry> = Vec::with_capacity(14000);
+
+        for _ in 0..14000 {
+            entries.push(GaitemGameDataEntry::read(cursor)?);
+        }
+
+        entries
+            .into_boxed_slice()
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "entries len"))
+    }
+}
+
+#[derive(Debug)]
+pub struct GaitemGameDataEntry {
+    item_id: u32,
+    acquired: u8,
+    padding: [u8; 3],
+}
+
+impl GaitemGameDataEntry {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            item_id: cursor.read_u32_le()?,
+            acquired: cursor.read_u8_le()?,
+            padding: Self::read_padding(cursor)?,
+        })
+    }
+
+    pub fn read_padding<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 3]> {
+        let mut padding = [0u8; 3];
+        cursor.read_exact(&mut padding)?;
+        Ok(padding)
     }
 }
 
