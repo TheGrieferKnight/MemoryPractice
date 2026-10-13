@@ -2279,3 +2279,25 @@ impl ProfileSummary {
         })
     }
 }
+
+#[derive(Debug)]
+pub struct USER_DATA_11 {
+    data: Box<[u8; 0x240010]>,
+}
+
+impl USER_DATA_11 {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        cursor.discard(16)?;
+
+        let mut data_buf = vec![0u8; 0x240_010 as usize];
+
+        cursor.read_exact(&mut data_buf)?;
+
+        Ok(Self {
+            data: data_buf
+                .into_boxed_slice()
+                .try_into()
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "USER_DATA_11 len"))?,
+        })
+    }
+}

@@ -1,6 +1,6 @@
 use crate::constants as con;
 use crate::cursor::CursorReader;
-use crate::types::CharacterSlot;
+use crate::types::{CharacterSlot, USER_DATA_10, USER_DATA_11};
 
 use std::fs::File;
 use std::io::{self, BufReader, Read};
@@ -9,8 +9,19 @@ mod constants;
 mod cursor;
 mod types;
 
-const CHARACTER_SLOT_OFFSETS: [u64; 1] = [0x300u64];
-// ,0x280310u64,0x500320u64,0x780330u64,0xA00340u64,0xC80350u64,0xF00360u64,0x1180370u64,0x1400380u64,0x1680390u64
+const CHARACTER_SLOT_OFFSETS: [u64; 10] = [
+    0x300u64,
+    0x280310u64,
+    0x500320u64,
+    0x780330u64,
+    0xA00340u64,
+    0xC80350u64,
+    0xF00360u64,
+    0x1180370u64,
+    0x1400380u64,
+    0x1680390u64,
+];
+//
 
 fn read_magic<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 4]> {
     let mut magic = [0u8; con::MAGIC_SIZE];
@@ -85,5 +96,12 @@ fn main() -> io::Result<()> {
     for _cso in CHARACTER_SLOT_OFFSETS {
         parse_character_slot(&mut cursor, &mut save_offsets)?;
     }
+
+    let user_data_10 = USER_DATA_10::read(&mut cursor)?;
+
+    USER_DATA_11::read(&mut cursor)?;
+
+    println!("{:#?}", user_data_10);
+
     Ok(())
 }
