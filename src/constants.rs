@@ -32,7 +32,7 @@ pub const EQUIPPED_SPELL_COUNT: usize = 14;
 
 // EquippedItems in types.rs
 pub const EQUIPPED_QUICK_ITEMS: usize = 10;
-pub const EQUIPPED_POUCH_ITEMS: usize = 10;
+pub const EQUIPPED_POUCH_ITEMS: usize = 6;
 
 // CharacterSlot in types.rs
 pub const EQUIPPED_GESTURES: usize = 6;

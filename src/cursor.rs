@@ -188,7 +188,9 @@ impl<R: Read> CursorReader<R> {
             .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
             .collect();
 
-        Ok(String::from_utf16_lossy(&code_units))
+        Ok(String::from_utf16_lossy(&code_units)
+            .trim_end_matches('\0')
+            .to_string())
     }
 
     pub fn discard(&mut self, mut count: usize) -> io::Result<()> {

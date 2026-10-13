@@ -314,7 +314,7 @@ pub struct CharacterSlot {
     map_id: u32,
     unk0x8: [u8; 8],
     unk0x10: [u8; 16],
-    gaitem_map: Box<[Gaitem; 5120]>,
+    gaitem_map: Vec<Gaitem>,
     pub(crate) player_game_data: PlayerGameData,
     sp_effects: Box<[SPEffect; 13]>,
     equipped_items_equip_index: EquipmentSlots,
@@ -364,8 +364,8 @@ pub struct CharacterSlot {
     game_man_0x5bf: u8,
     spawn_point_entity_id: u32,
     game_man_0xb64: u32,
-    temp_spawn_point_entity_id: u32,
-    game_man_0xcb3: u8,
+    temp_spawn_point_entity_id: Option<u32>,
+    game_man_0xcb3: Option<u8>,
     net_man: NetMan,
     world_area_weather: WorldAreaWeather,
     world_area_time: WorldAreaTime,
@@ -397,10 +397,13 @@ impl CharacterSlot {
         Ok(v)
     }
 
-    fn parse_gaitem_map<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Box<[Gaitem; 5120]>> {
-        let mut gaitems: Vec<Gaitem> = Vec::with_capacity(5120);
+    fn parse_gaitem_map<R: Read>(
+        cursor: &mut CursorReader<R>,
+        count: usize,
+    ) -> io::Result<Vec<Gaitem>> {
+        let mut gaitems: Vec<Gaitem> = Vec::with_capacity(count);
 
-        for _ in 0..GAITEM_COUNT_NEW {
+        for _ in 0..count {
             let gaitem_handle = cursor.read_u32_le()?;
 
             let item_id = cursor.read_u32_le()?;
@@ -440,10 +443,7 @@ impl CharacterSlot {
             gaitems.push(item);
         }
 
-        gaitems
-            .into_boxed_slice()
-            .try_into()
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "sp_effects len"))
+        Ok(gaitems)
     }
 
     fn read_unk0x8<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 8]> {
@@ -483,12 +483,20 @@ impl CharacterSlot {
     }
 
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {
-            version: cursor.read_u32_le()?,
+        let slot_start = cursor.position();
+        let version = cursor.read_u32_le()?;
+        let gaitem_count = if version <= 81 {
+            GAITEM_COUNT_OLD
+        } else {
+            GAITEM_COUNT_NEW
+        };
+
+        let mut slot = Self {
+            version,
             map_id: cursor.read_u32_le()?,
             unk0x8: Self::read_unk0x8(cursor)?,
             unk0x10: Self::read_unk0x10(cursor)?,
-            gaitem_map: Self::parse_gaitem_map(cursor)?,
+            gaitem_map: Self::parse_gaitem_map(cursor, gaitem_count)?,
             player_game_data: PlayerGameData::read(cursor)?,
             sp_effects: Self::read_sp_effects(cursor)?,
             equipped_items_equip_index: EquipmentSlots::read(cursor)?,
@@ -538,8 +546,16 @@ impl CharacterSlot {
             game_man_0x5bf: cursor.read_u8_le()?,
             spawn_point_entity_id: cursor.read_u32_le()?,
             game_man_0xb64: cursor.read_u32_le()?,
-            temp_spawn_point_entity_id: cursor.read_u32_le()?,
-            game_man_0xcb3: cursor.read_u8_le()?,
+            temp_spawn_point_entity_id: if version >= 65 {
+                Some(cursor.read_u32_le()?)
+            } else {
+                None
+            },
+            game_man_0xcb3: if version >= 66 {
+                Some(cursor.read_u8_le()?)
+            } else {
+                None
+            },
             net_man: NetMan::read(cursor)?,
             world_area_weather: WorldAreaWeather::read(cursor)?,
             world_area_time: WorldAreaTime::read(cursor)?,
@@ -549,13 +565,31 @@ impl CharacterSlot {
             dlc: DLC::read(cursor)?,
             player_data_hash: PlayerGameDataHash::read(cursor)?,
             rest: Vec::new(),
-        })
+        };
+
+        let slot_end = slot_start + (PC_CHARACTER_SLOT_SIZE - CHECKSUM_SIZE) as u64;
+        let position = cursor.position();
+
+        if position > slot_end {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "character slot overran its end: position {}, slot end {}",
+                    position, slot_end
+                ),
+            ));
+        }
+
+        slot.rest = vec![0u8; (slot_end - position) as usize];
+        cursor.read_exact(&mut slot.rest)?;
+
+        Ok(slot)
     }
 
     fn read_face_data<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 303]> {
         let mut buffer = [0u8; 303];
 
-        cursor.read_exact(&mut buffer);
+        cursor.read_exact(&mut buffer)?;
 
         Ok(buffer)
     }
@@ -573,15 +607,11 @@ pub struct Inventory {
 
 impl Inventory {
     pub fn read_inventory_held<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        let common_items_held = Self::read_common_items_held(cursor)?;
-
-        let key_items_held = Self::read_key_items_held(cursor)?;
-
         Ok(Self {
-            common_item_count: common_items_held.len() as u32,
-            common_items: common_items_held,
-            key_item_count: key_items_held.len() as u32,
-            key_items: key_items_held,
+            common_item_count: cursor.read_u32_le()?,
+            common_items: Self::read_common_items_held(cursor)?,
+            key_item_count: cursor.read_u32_le()?,
+            key_items: Self::read_key_items_held(cursor)?,
             equip_index_counter: cursor.read_u32_le()?,
             acquisition_index_counter: cursor.read_u32_le()?,
         })
@@ -722,7 +752,7 @@ impl EquippedItems {
         Ok(Self {
             quick_items: Self::read_quick_items(cursor)?,
             active_quick_item_index: cursor.read_u32_le()?,
-            pouch_items: Self::read_quick_items(cursor)?,
+            pouch_items: Self::read_pouch_items(cursor)?,
             unk0x84: cursor.read_u32_le()?,
             unk0x88: cursor.read_u32_le()?,
         })
@@ -805,6 +835,28 @@ impl Projectile {
 
 #[derive(Debug)]
 pub struct EquippedArmamentsAndItems {
+    left_hand_armament1: u32,
+    right_hand_armament1: u32,
+    left_hand_armament2: u32,
+    right_hand_armament2: u32,
+    left_hand_armament3: u32,
+    right_hand_armament3: u32,
+    arrows1: u32,
+    bolts1: u32,
+    arrows2: u32,
+    bolts2: u32,
+    arrows3: u32,
+    bolts3: u32,
+    head: u32,
+    chest: u32,
+    arms: u32,
+    legs: u32,
+    hair: u32,
+    talisman1: u32,
+    talisman2: u32,
+    talisman3: u32,
+    talisman4: u32,
+    talisman5: u32,
     quickitem1: u32,
     quickitem2: u32,
     quickitem3: u32,
@@ -827,6 +879,28 @@ pub struct EquippedArmamentsAndItems {
 impl EquippedArmamentsAndItems {
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
         Ok(Self {
+            left_hand_armament1: cursor.read_u32_le()?,
+            right_hand_armament1: cursor.read_u32_le()?,
+            left_hand_armament2: cursor.read_u32_le()?,
+            right_hand_armament2: cursor.read_u32_le()?,
+            left_hand_armament3: cursor.read_u32_le()?,
+            right_hand_armament3: cursor.read_u32_le()?,
+            arrows1: cursor.read_u32_le()?,
+            bolts1: cursor.read_u32_le()?,
+            arrows2: cursor.read_u32_le()?,
+            bolts2: cursor.read_u32_le()?,
+            arrows3: cursor.read_u32_le()?,
+            bolts3: cursor.read_u32_le()?,
+            head: cursor.read_u32_le()?,
+            chest: cursor.read_u32_le()?,
+            arms: cursor.read_u32_le()?,
+            legs: cursor.read_u32_le()?,
+            hair: cursor.read_u32_le()?,
+            talisman1: cursor.read_u32_le()?,
+            talisman2: cursor.read_u32_le()?,
+            talisman3: cursor.read_u32_le()?,
+            talisman4: cursor.read_u32_le()?,
+            talisman5: cursor.read_u32_le()?,
             quickitem1: cursor.read_u32_le()?,
             quickitem2: cursor.read_u32_le()?,
             quickitem3: cursor.read_u32_le()?,
@@ -1013,7 +1087,7 @@ impl MenuSaveLoad {
 
 #[derive(Debug)]
 pub struct TrophyEquipData {
-    unk0x0: u16,
+    unk0x0: u32,
     legendary_weapon: u128,
     legendary_goods: u128,
     legendary_talismans: u128,
@@ -1022,7 +1096,7 @@ pub struct TrophyEquipData {
 impl TrophyEquipData {
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
         Ok(Self {
-            unk0x0: cursor.read_u16_le()?,
+            unk0x0: cursor.read_u32_le()?,
             legendary_weapon: cursor.read_u128_le()?,
             legendary_goods: cursor.read_u128_le()?,
             legendary_talismans: cursor.read_u128_le()?,
@@ -1096,6 +1170,7 @@ impl TutorialData {
         let unk0x0 = cursor.read_u16_le()?;
         let unk0x2 = cursor.read_u16_le()?;
         let size = cursor.read_u32_le()?;
+        let size = if size > 0x10000 { 0x400 } else { size };
 
         Ok(Self {
             unk0x0,
@@ -1117,9 +1192,10 @@ impl TutorialDataChunk {
         cursor: &mut CursorReader<R>,
         size: u32,
     ) -> io::Result<Vec<u32>> {
-        let mut tutorial_ids: Vec<u32> = Vec::with_capacity(size as usize);
+        let id_count = (size.saturating_sub(4) / 4) as usize;
+        let mut tutorial_ids: Vec<u32> = Vec::with_capacity(id_count);
 
-        for _ in 0..size {
+        for _ in 0..id_count {
             tutorial_ids.push(cursor.read_u32_le()?);
         }
 
@@ -1143,11 +1219,13 @@ pub struct FieldArea {
 impl FieldArea {
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
         let size = cursor.read_u32_le()?;
+        let data = if size > 0 && size < 0x10000 {
+            Self::read_data(cursor, size)?
+        } else {
+            Vec::new()
+        };
 
-        Ok(Self {
-            size,
-            data: Self::read_data(cursor, size)?,
-        })
+        Ok(Self { size, data })
     }
 
     pub fn read_data<R: Read>(cursor: &mut CursorReader<R>, size: u32) -> io::Result<Vec<u8>> {
@@ -1166,11 +1244,13 @@ pub struct WorldArea {
 impl WorldArea {
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
         let size = cursor.read_u32_le()?;
+        let data = if size > 0 && size < 0x10000 {
+            Self::read_data(cursor, size)?
+        } else {
+            Vec::new()
+        };
 
-        Ok(Self {
-            size,
-            data: Self::read_data(cursor, size)?,
-        })
+        Ok(Self { size, data })
     }
 
     pub fn read_data<R: Read>(cursor: &mut CursorReader<R>, size: u32) -> io::Result<Vec<u8>> {
@@ -1189,11 +1269,13 @@ pub struct WorldGeomMan {
 impl WorldGeomMan {
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
         let size = cursor.read_u32_le()?;
+        let data = if size > 0 && size < 0x100000 {
+            Self::read_data(cursor, size)?
+        } else {
+            Vec::new()
+        };
 
-        Ok(Self {
-            size,
-            data: Self::read_data(cursor, size)?,
-        })
+        Ok(Self { size, data })
     }
 
     pub fn read_data<R: Read>(cursor: &mut CursorReader<R>, size: u32) -> io::Result<Vec<u8>> {
@@ -1212,11 +1294,13 @@ pub struct RendMan {
 impl RendMan {
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
         let size = cursor.read_u32_le()?;
+        let data = if size > 0 && size < 0x100000 {
+            Self::read_data(cursor, size)?
+        } else {
+            Vec::new()
+        };
 
-        Ok(Self {
-            size,
-            data: Self::read_data(cursor, size)?,
-        })
+        Ok(Self { size, data })
     }
 
     pub fn read_data<R: Read>(cursor: &mut CursorReader<R>, size: u32) -> io::Result<Vec<u8>> {
