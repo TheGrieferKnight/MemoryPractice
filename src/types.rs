@@ -1001,13 +1001,12 @@ impl MenuSaveLoad {
         let unk0x0 = cursor.read_u16_le()?;
         let unk0x2 = cursor.read_u16_le()?;
         let size = cursor.read_u32_le()?;
-        let data = Self::read_data(cursor, size)?;
 
         Ok(Self {
             unk0x0,
             unk0x2,
             size,
-            data,
+            data: Self::read_data(cursor, size)?,
         })
     }
 }
@@ -1085,11 +1084,53 @@ impl GaitemGameDataEntry {
 }
 
 #[derive(Debug)]
-pub struct TutorialData {}
+pub struct TutorialData {
+    unk0x0: u16,
+    unk0x2: u16,
+    size: u32,
+    data: TutorialDataChunk,
+}
 
 impl TutorialData {
-    pub fn read<R: Read>(_cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {})
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        let unk0x0 = cursor.read_u16_le()?;
+        let unk0x2 = cursor.read_u16_le()?;
+        let size = cursor.read_u32_le()?;
+
+        Ok(Self {
+            unk0x0,
+            unk0x2,
+            size,
+            data: TutorialDataChunk::read(cursor, size)?,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct TutorialDataChunk {
+    count: u32,
+    tutorial_ids: Vec<u32>,
+}
+
+impl TutorialDataChunk {
+    pub fn read_tutorial_ids<R: Read>(
+        cursor: &mut CursorReader<R>,
+        size: u32,
+    ) -> io::Result<Vec<u32>> {
+        let mut tutorial_ids: Vec<u32> = Vec::with_capacity(size as usize);
+
+        for _ in 0..size {
+            tutorial_ids.push(cursor.read_u32_le()?);
+        }
+
+        Ok(tutorial_ids)
+    }
+
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>, size: u32) -> io::Result<Self> {
+        Ok(Self {
+            count: cursor.read_u32_le()?,
+            tutorial_ids: Self::read_tutorial_ids(cursor, size)?,
+        })
     }
 }
 
