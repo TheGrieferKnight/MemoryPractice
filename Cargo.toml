@@ -1,3 +1,4 @@
+#:tombi schema.strict = false
 [package]
 name = "MemoryPractice"
 version = "0.1.0"
@@ -13,3 +14,12 @@ lto = "fat"
 codegen-units = 1
 panic = "abort"
 incremental = false
+
+[profile.dev."*"]
+opt-level = 3
+
+[profile.dev]
+debug = "line-tables-only"
+
+[dependencies]
+iced = { version = "0.14.0", features = ["thread-pool","tiny-skia", "wayland"], default-features = false }
