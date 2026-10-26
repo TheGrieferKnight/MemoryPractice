@@ -50,806 +50,6 @@ impl EldenRingSave {
 }
 
 #[derive(Debug)]
-pub struct UserData10 {
-    md5: u128,
-    version: u32,
-    steam_id: u64,
-    settings: Settings,
-    menu_system_save_load: MenuSystemSaveLoad,
-    profile_summary: ProfileSummary,
-    pc_option_data: Box<[u8; PC_OPTION_DATA]>,
-    key_config_save_load: KeyConfigSaveLoad,
-}
-
-impl UserData10 {
-    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        let start_pos = cursor.position();
-
-        let md5 = cursor.read_u128_le()?;
-        let version = cursor.read_u32_le()?;
-        let steam_id = cursor.read_u64_le()?;
-
-        let settings = Settings::read(cursor)?;
-
-        cursor.discard((start_pos + 16 + 4 + 8 + 0x140 - cursor.position()) as usize)?;
-
-        let menu_system_save_load = MenuSystemSaveLoad::read(cursor)?;
-        let profile_summary = ProfileSummary::read(cursor)?;
-
-        cursor.discard(5)?;
-
-        let pc_option_data = Self::read_pc_option_data(cursor)?;
-        let key_config_save_load = KeyConfigSaveLoad::read(cursor)?;
-
-        cursor.discard(8)?;
-
-        let bytes_read = cursor.position() - start_pos;
-
-        let remaining = 0x60010u64.saturating_sub(bytes_read);
-
-        if remaining > 0 {
-            cursor.discard(remaining as usize)?
-        };
-
-        Ok(Self {
-            md5,
-            version,
-            steam_id,
-            settings,
-            menu_system_save_load,
-            profile_summary,
-            pc_option_data,
-            key_config_save_load,
-        })
-    }
-
-    pub fn read_pc_option_data<R: Read>(
-        cursor: &mut CursorReader<R>,
-    ) -> io::Result<Box<[u8; PC_OPTION_DATA]>> {
-        let mut data = vec![0u8; PC_OPTION_DATA];
-
-        cursor.read_exact(&mut data)?;
-
-        data.into_boxed_slice()
-            .try_into()
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "PC_OPTION_DATA len"))
-    }
-}
-
-#[derive(Debug)]
-pub struct UserData11 {
-    data: Box<[u8; USER_DATA_11]>,
-}
-
-impl UserData11 {
-    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        cursor.discard(16)?;
-
-        let mut data_buf = vec![0u8; USER_DATA_11];
-
-        cursor.read_exact(&mut data_buf)?;
-
-        Ok(Self {
-            data: data_buf
-                .into_boxed_slice()
-                .try_into()
-                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "USER_DATA_11 len"))?,
-        })
-    }
-}
-
-#[derive(Debug)]
-pub struct Settings {
-    camera_speed: u8,
-    controller_vibration: u8,
-    brightness: u8,
-    sound_type: u8,
-    music_volume: u8,
-    sound_effects_volume: u8,
-    voice_volume: u8,
-    display_blood: u8,
-    subtitles: u8,
-    hud: u8,
-    camera_x_axis: u8,
-    camera_y_axis: u8,
-    toggle_auto_lockon: u8,
-    camera_auto_wall_recovery: u8,
-    unk0xe: u8,
-    unk0xf: u8,
-    reset_camera_y_axis: u8,
-    cinematic_effects: u8,
-    unk0x12: u8,
-    cross_region_play: u8,
-    voice_chat: u8,
-    display_player_names: u8,
-    manual_attack_aim: u8,
-    autotarget: u8,
-    launchsettings: u8,
-    send_summon_sign: u8,
-    unk0x1a: u8,
-    hdr: u8,
-    hdr_adjust_brightness: u8,
-    hdr_maximum_brightness: u8,
-    hdr_adjust_saturation: u8,
-    unk0x1f: u8,
-    master_volume: u8,
-    is_raytracing_on: u8,
-    mark_new_items: u8,
-    show_recent_tabs: u8,
-    unk0x24: u64,
-    unk0x2c: u16,
-    show_tutorials: u8,
-    camera_auto_rotation: u8,
-}
-
-impl Settings {
-    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {
-            camera_speed: cursor.read_u8_le()?,
-            controller_vibration: cursor.read_u8_le()?,
-            brightness: cursor.read_u8_le()?,
-            sound_type: cursor.read_u8_le()?,
-            music_volume: cursor.read_u8_le()?,
-            sound_effects_volume: cursor.read_u8_le()?,
-            voice_volume: cursor.read_u8_le()?,
-            display_blood: cursor.read_u8_le()?,
-            subtitles: cursor.read_u8_le()?,
-            hud: cursor.read_u8_le()?,
-            camera_x_axis: cursor.read_u8_le()?,
-            camera_y_axis: cursor.read_u8_le()?,
-            toggle_auto_lockon: cursor.read_u8_le()?,
-            camera_auto_wall_recovery: cursor.read_u8_le()?,
-            unk0xe: cursor.read_u8_le()?,
-            unk0xf: cursor.read_u8_le()?,
-            reset_camera_y_axis: cursor.read_u8_le()?,
-            cinematic_effects: cursor.read_u8_le()?,
-            unk0x12: cursor.read_u8_le()?,
-            cross_region_play: cursor.read_u8_le()?,
-            voice_chat: cursor.read_u8_le()?,
-            display_player_names: cursor.read_u8_le()?,
-            manual_attack_aim: cursor.read_u8_le()?,
-            autotarget: cursor.read_u8_le()?,
-            launchsettings: cursor.read_u8_le()?,
-            send_summon_sign: cursor.read_u8_le()?,
-            unk0x1a: cursor.read_u8_le()?,
-            hdr: cursor.read_u8_le()?,
-            hdr_adjust_brightness: cursor.read_u8_le()?,
-            hdr_maximum_brightness: cursor.read_u8_le()?,
-            hdr_adjust_saturation: cursor.read_u8_le()?,
-            unk0x1f: cursor.read_u8_le()?,
-            master_volume: cursor.read_u8_le()?,
-            is_raytracing_on: cursor.read_u8_le()?,
-            mark_new_items: cursor.read_u8_le()?,
-            show_recent_tabs: cursor.read_u8_le()?,
-            unk0x24: cursor.read_u64_le()?,
-            unk0x2c: cursor.read_u16_le()?,
-            show_tutorials: cursor.read_u8_le()?,
-            camera_auto_rotation: cursor.read_u8_le()?,
-        })
-    }
-}
-
-#[derive(Debug)]
-pub struct MenuSystemSaveLoad {
-    raw_data: Box<[u8; MENU_SYSTEM_SAVE_LOAD]>,
-    // parsed: CSMenuSystemSaveLoad,
-}
-
-impl MenuSystemSaveLoad {
-    pub fn read_raw_data<R: Read>(
-        cursor: &mut CursorReader<R>,
-    ) -> io::Result<Box<[u8; MENU_SYSTEM_SAVE_LOAD]>> {
-        let mut presets: Vec<u8> = Vec::with_capacity(MENU_SYSTEM_SAVE_LOAD);
-
-        for _ in 0..MENU_SYSTEM_SAVE_LOAD {
-            presets.push(cursor.read_u8_le()?);
-        }
-
-        presets
-            .into_boxed_slice()
-            .try_into()
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "MENU_SYSTEM_SAVE_LOAD len"))
-    }
-
-    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {
-            raw_data: Self::read_raw_data(cursor)?,
-        })
-    }
-}
-
-// Unused Parsed Version of Menu System Save Load:
-
-#[derive(Debug)]
-pub struct CSMenuSystemSaveLoad {
-    unk0x0: u16,
-    unk0x2: u16,
-    size: u32,
-    presets: Vec<FacePreset>,
-    padding: Box<[u8; CS_MENU_SYSTEM_SAVE_LOAD_PADDING]>,
-}
-
-impl CSMenuSystemSaveLoad {
-    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {
-            unk0x0: cursor.read_u16_le()?,
-            unk0x2: cursor.read_u16_le()?,
-            size: cursor.read_u32_le()?,
-            presets: Self::read_presets(cursor)?,
-            padding: Self::read_padding(cursor)?,
-        })
-    }
-
-    pub fn read_presets<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<FacePreset>> {
-        let mut presets: Vec<FacePreset> = Vec::with_capacity(FACE_PRESETS);
-
-        for _ in 0..FACE_PRESETS {
-            presets.push(FacePreset::read(cursor)?);
-        }
-
-        Ok(presets)
-    }
-
-    pub fn read_padding<R: Read>(
-        cursor: &mut CursorReader<R>,
-    ) -> io::Result<Box<[u8; CS_MENU_SYSTEM_SAVE_LOAD_PADDING]>> {
-        let mut presets: Vec<u8> = Vec::with_capacity(CS_MENU_SYSTEM_SAVE_LOAD_PADDING);
-
-        for _ in 0..CS_MENU_SYSTEM_SAVE_LOAD_PADDING {
-            presets.push(cursor.read_u8_le()?);
-        }
-
-        presets
-            .into_boxed_slice()
-            .try_into()
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "CS_MENU_SYSTEM_SAVE_LOAD len"))
-    }
-}
-
-#[derive(Debug)]
-pub struct ProfileSummary {
-    active_profiles: [u8; PROFILES],
-    profiles: Vec<Profile>,
-}
-
-impl ProfileSummary {
-    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {
-            active_profiles: Self::read_active_profiles(cursor)?,
-            profiles: Self::read_profiles(cursor)?,
-        })
-    }
-
-    pub fn read_active_profiles<R: Read>(
-        cursor: &mut CursorReader<R>,
-    ) -> io::Result<[u8; PROFILES]> {
-        let mut active_profiles = [0u8; PROFILES];
-
-        cursor.read_exact(&mut active_profiles)?;
-
-        Ok(active_profiles)
-    }
-
-    pub fn read_profiles<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<Profile>> {
-        let mut profiles: Vec<Profile> = Vec::with_capacity(PROFILES);
-
-        for _ in 0..PROFILES {
-            profiles.push(Profile::read(cursor)?);
-        }
-
-        Ok(profiles)
-    }
-}
-
-#[derive(Debug)]
-pub struct Profile {
-    character_name: String, // (UTF-16LE, 16 chars max)
-    terminator: u16,
-    level: u32,
-    seconds_played: u32,
-    runes_memory: u32,
-    map_id: [u8; MAP_ID],
-    place_name_id: u32,
-    face_data: [u8; PROFILE_FACE_DATA],
-    equipment: ProfileEquipment,
-    body_type: u8,
-    archetype: u8,
-    starting_gift: u8,
-    unk_padding: [u8; PROFILE_UNK_PADDING],
-}
-
-impl Profile {
-    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {
-            character_name: cursor.read_utf16_le_to_string(CHARACTER_NAME)?,
-            terminator: cursor.read_u16_le()?,
-            level: cursor.read_u32_le()?,
-            seconds_played: cursor.read_u32_le()?,
-            runes_memory: cursor.read_u32_le()?,
-            map_id: Self::read_map_id(cursor)?,
-            place_name_id: cursor.read_u32_le()?,
-            face_data: Self::read_face_data(cursor)?,
-            equipment: ProfileEquipment::read(cursor)?,
-            body_type: cursor.read_u8_le()?,
-            archetype: cursor.read_u8_le()?,
-            starting_gift: cursor.read_u8_le()?,
-            unk_padding: Self::read_unk_padding(cursor)?,
-        })
-    }
-
-    pub fn read_map_id<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; MAP_ID]> {
-        let mut map_id = [0u8; MAP_ID];
-
-        cursor.read_exact(&mut map_id)?;
-
-        Ok(map_id)
-    }
-
-    pub fn read_face_data<R: Read>(
-        cursor: &mut CursorReader<R>,
-    ) -> io::Result<[u8; PROFILE_FACE_DATA]> {
-        let mut face_data = [0u8; PROFILE_FACE_DATA];
-
-        cursor.read_exact(&mut face_data)?;
-
-        Ok(face_data)
-    }
-
-    pub fn read_unk_padding<R: Read>(
-        cursor: &mut CursorReader<R>,
-    ) -> io::Result<[u8; PROFILE_UNK_PADDING]> {
-        let mut unk_padding = [0u8; PROFILE_UNK_PADDING];
-
-        cursor.read_exact(&mut unk_padding)?;
-
-        Ok(unk_padding)
-    }
-}
-
-#[derive(Debug)]
-pub struct ProfileEquipment {
-    raw_data: [u8; PROFILE_EQUIPMENT_RAW],
-}
-
-impl ProfileEquipment {
-    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {
-            raw_data: Self::read_raw_data(cursor)?,
-        })
-    }
-
-    pub fn read_raw_data<R: Read>(
-        cursor: &mut CursorReader<R>,
-    ) -> io::Result<[u8; PROFILE_EQUIPMENT_RAW]> {
-        let mut raw_data = [0u8; PROFILE_EQUIPMENT_RAW];
-
-        cursor.read_exact(&mut raw_data)?;
-
-        Ok(raw_data)
-    }
-}
-
-#[derive(Debug)]
-pub struct FacePreset {
-    unk0x00: [u8; FACE_PRESET_UNK0X00],
-    face_data_marker: i32,
-    magic: u32,
-    alignment: u8,
-    size: u8,
-    face_model: u8,
-    hair_model: u8,
-    unk0x14: u8,
-    eyebrow_model: u8,
-    beard_model: u8,
-    eyepatch_model: u8,
-    unk0x24: u8,
-    unk0x28: u8,
-    apparent_age: u8,
-    facial_aesthetic: u8,
-    form_emphasis: u8,
-    unk0x2f: u8,
-    brow_ridge_height: u8,
-    inner_brow_ridge: u8,
-    outer_brow_ridge: u8,
-    cheekbone_height: u8,
-    cheekbone_depth: u8,
-    cheekbone_width: u8,
-    cheekbone_protrusion: u8,
-    cheeks: u8,
-    chin_tip_position: u8,
-    chin_length: u8,
-    chin_protrusion: u8,
-    chin_depth: u8,
-    chin_size: u8,
-    chin_height: u8,
-    chin_width: u8,
-    eye_position: u8,
-    eye_size: u8,
-    eye_slant: u8,
-    eye_spacing: u8,
-    nose_size: u8,
-    nose_forehead_ratio: u8,
-    unk0x45: u8,
-    face_protrusion: u8,
-    vertical_face_ratio: u8,
-    facial_feature_slant: u8,
-    horizontal_face_ratio: u8,
-    unk0x4a: u8,
-    forehead_depth: u8,
-    forehead_protrusion: u8,
-    unk0x4d: u8,
-    jaw_protrusion: u8,
-    jaw_width: u8,
-    lower_jaw: u8,
-    jaw_contour: u8,
-    lip_shape: u8,
-    lip_size: u8,
-    lip_fullness: u8,
-    mouth_expression: u8,
-    lip_protrusion: u8,
-    lip_thickness: u8,
-    mouth_protrusion: u8,
-    mouth_slant: u8,
-    occlusion: u8,
-    mouth_position: u8,
-    mouth_width: u8,
-    mouth_chin_distance: u8,
-    nose_ridge_depth: u8,
-    nose_ridge_length: u8,
-    nose_position: u8,
-    nose_tip_height: u8,
-    nostril_slant: u8,
-    nostril_size: u8,
-    nostril_width: u8,
-    nose_protrusion: u8,
-    nose_bridge_height: u8,
-    bridge_protrusion1: u8,
-    bridge_protrusion2: u8,
-    nose_bridge_width: u8,
-    nose_height: u8,
-    nose_slant: u8,
-    unk0x6c: Box<[u8; FACE_PRESET_UNK0X6C]>,
-    head_size: u8,
-    chest_size: u8,
-    abdomen_size: u8,
-    arms_size: u8,
-    legs_size: u8,
-    unk0xb1: u16,
-    skin_color_r: u8,
-    skin_color_g: u8,
-    skin_color_b: u8,
-    skin_luster: u8,
-    pores: u8,
-    stubble: u8,
-    dark_circles: u8,
-    dark_circle_color_r: u8,
-    dark_circle_color_g: u8,
-    dark_circle_color_b: u8,
-    cheeks_color_intensity: u8,
-    cheek_color_r: u8,
-    cheek_color_g: u8,
-    cheek_color_b: u8,
-    eye_liner: u8,
-    eye_liner_color_r: u8,
-    eye_liner_color_g: u8,
-    eye_liner_color_b: u8,
-    eye_shadow_lower: u8,
-    eye_shadow_lower_color_r: u8,
-    eye_shadow_lower_color_g: u8,
-    eye_shadow_lower_color_b: u8,
-    eye_shadow_upper: u8,
-    eye_shadow_upper_color_r: u8,
-    eye_shadow_upper_color_g: u8,
-    eye_shadow_upper_color_b: u8,
-    lip_stick: u8,
-    lip_stick_color_r: u8,
-    lip_stick_color_g: u8,
-    lip_stick_color_b: u8,
-    tattoo_mark_position_horizontal: u8,
-    tattoo_mark_position_vertical: u8,
-    tattoo_mark_angle: u8,
-    tattoo_mark_expansion: u8,
-    tattoo_mark_color_r: u8,
-    tattoo_mark_color_g: u8,
-    tattoo_mark_color_b: u8,
-    unk0xd8: u8,
-    tattoo_mark_flip: u8,
-    body_hair: u8,
-    body_hair_color_r: u8,
-    body_hair_color_g: u8,
-    body_hair_color_b: u8,
-    right_iris_color_r: u8,
-    right_iris_color_g: u8,
-    right_iris_color_b: u8,
-    right_iris_size: u8,
-    right_eye_clouding: u8,
-    right_eye_clouding_color_r: u8,
-    right_eye_clouding_color_g: u8,
-    right_eye_clouding_color_b: u8,
-    right_eye_white_color_r: u8,
-    right_eye_white_color_g: u8,
-    right_eye_white_color_b: u8,
-    right_eye_position: u8,
-    left_iris_color_r: u8,
-    left_iris_color_g: u8,
-    left_iris_color_b: u8,
-    left_iris_size: u8,
-    left_eye_clouding: u8,
-    left_eye_clouding_color_r: u8,
-    left_eye_clouding_color_g: u8,
-    left_eye_clouding_color_b: u8,
-    left_eye_white_color_r: u8,
-    left_eye_white_color_g: u8,
-    left_eye_white_color_b: u8,
-    left_eye_position: u8,
-    hair_color_r: u8,
-    hair_color_g: u8,
-    hair_color_b: u8,
-    luster: u8,
-    hair_root_darkness: u8,
-    white_hairs: u8,
-    beard_color_r: u8,
-    beard_color_g: u8,
-    beard_color_b: u8,
-    beard_luster: u8,
-    beard_root_darkness: u8,
-    beard_white_hairs: u8,
-    brow_color_r: u8,
-    brow_color_g: u8,
-    brow_color_b: u8,
-    brow_luster: u8,
-    brow_root_darkness: u8,
-    brow_white_hairs: u8,
-    eye_lash_color_r: u8,
-    eye_lash_color_g: u8,
-    eye_lash_color_b: u8,
-    eye_patch_color_r: u8,
-    eye_patch_color_g: u8,
-    eye_patch_color_b: u8,
-    pad: [u8; FACE_PRESET_PAD],
-}
-
-impl FacePreset {
-    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {
-            unk0x00: Self::read_unk0x00(cursor)?,
-            face_data_marker: cursor.read_i32_le()?,
-            magic: cursor.read_u32_le()?,
-            alignment: cursor.read_u8_le()?,
-            size: cursor.read_u8_le()?,
-            face_model: cursor.read_u8_le()?,
-            hair_model: cursor.read_u8_le()?,
-            unk0x14: cursor.read_u8_le()?,
-            eyebrow_model: cursor.read_u8_le()?,
-            beard_model: cursor.read_u8_le()?,
-            eyepatch_model: cursor.read_u8_le()?,
-            unk0x24: cursor.read_u8_le()?,
-            unk0x28: cursor.read_u8_le()?,
-            apparent_age: cursor.read_u8_le()?,
-            facial_aesthetic: cursor.read_u8_le()?,
-            form_emphasis: cursor.read_u8_le()?,
-            unk0x2f: cursor.read_u8_le()?,
-            brow_ridge_height: cursor.read_u8_le()?,
-            inner_brow_ridge: cursor.read_u8_le()?,
-            outer_brow_ridge: cursor.read_u8_le()?,
-            cheekbone_height: cursor.read_u8_le()?,
-            cheekbone_depth: cursor.read_u8_le()?,
-            cheekbone_width: cursor.read_u8_le()?,
-            cheekbone_protrusion: cursor.read_u8_le()?,
-            cheeks: cursor.read_u8_le()?,
-            chin_tip_position: cursor.read_u8_le()?,
-            chin_length: cursor.read_u8_le()?,
-            chin_protrusion: cursor.read_u8_le()?,
-            chin_depth: cursor.read_u8_le()?,
-            chin_size: cursor.read_u8_le()?,
-            chin_height: cursor.read_u8_le()?,
-            chin_width: cursor.read_u8_le()?,
-            eye_position: cursor.read_u8_le()?,
-            eye_size: cursor.read_u8_le()?,
-            eye_slant: cursor.read_u8_le()?,
-            eye_spacing: cursor.read_u8_le()?,
-            nose_size: cursor.read_u8_le()?,
-            nose_forehead_ratio: cursor.read_u8_le()?,
-            unk0x45: cursor.read_u8_le()?,
-            face_protrusion: cursor.read_u8_le()?,
-            vertical_face_ratio: cursor.read_u8_le()?,
-            facial_feature_slant: cursor.read_u8_le()?,
-            horizontal_face_ratio: cursor.read_u8_le()?,
-            unk0x4a: cursor.read_u8_le()?,
-            forehead_depth: cursor.read_u8_le()?,
-            forehead_protrusion: cursor.read_u8_le()?,
-            unk0x4d: cursor.read_u8_le()?,
-            jaw_protrusion: cursor.read_u8_le()?,
-            jaw_width: cursor.read_u8_le()?,
-            lower_jaw: cursor.read_u8_le()?,
-            jaw_contour: cursor.read_u8_le()?,
-            lip_shape: cursor.read_u8_le()?,
-            lip_size: cursor.read_u8_le()?,
-            lip_fullness: cursor.read_u8_le()?,
-            mouth_expression: cursor.read_u8_le()?,
-            lip_protrusion: cursor.read_u8_le()?,
-            lip_thickness: cursor.read_u8_le()?,
-            mouth_protrusion: cursor.read_u8_le()?,
-            mouth_slant: cursor.read_u8_le()?,
-            occlusion: cursor.read_u8_le()?,
-            mouth_position: cursor.read_u8_le()?,
-            mouth_width: cursor.read_u8_le()?,
-            mouth_chin_distance: cursor.read_u8_le()?,
-            nose_ridge_depth: cursor.read_u8_le()?,
-            nose_ridge_length: cursor.read_u8_le()?,
-            nose_position: cursor.read_u8_le()?,
-            nose_tip_height: cursor.read_u8_le()?,
-            nostril_slant: cursor.read_u8_le()?,
-            nostril_size: cursor.read_u8_le()?,
-            nostril_width: cursor.read_u8_le()?,
-            nose_protrusion: cursor.read_u8_le()?,
-            nose_bridge_height: cursor.read_u8_le()?,
-            bridge_protrusion1: cursor.read_u8_le()?,
-            bridge_protrusion2: cursor.read_u8_le()?,
-            nose_bridge_width: cursor.read_u8_le()?,
-            nose_height: cursor.read_u8_le()?,
-            nose_slant: cursor.read_u8_le()?,
-            unk0x6c: Self::read_unk0x6c(cursor)?,
-            head_size: cursor.read_u8_le()?,
-            chest_size: cursor.read_u8_le()?,
-            abdomen_size: cursor.read_u8_le()?,
-            arms_size: cursor.read_u8_le()?,
-            legs_size: cursor.read_u8_le()?,
-            unk0xb1: cursor.read_u16_le()?,
-            skin_color_r: cursor.read_u8_le()?,
-            skin_color_g: cursor.read_u8_le()?,
-            skin_color_b: cursor.read_u8_le()?,
-            skin_luster: cursor.read_u8_le()?,
-            pores: cursor.read_u8_le()?,
-            stubble: cursor.read_u8_le()?,
-            dark_circles: cursor.read_u8_le()?,
-            dark_circle_color_r: cursor.read_u8_le()?,
-            dark_circle_color_g: cursor.read_u8_le()?,
-            dark_circle_color_b: cursor.read_u8_le()?,
-            cheeks_color_intensity: cursor.read_u8_le()?,
-            cheek_color_r: cursor.read_u8_le()?,
-            cheek_color_g: cursor.read_u8_le()?,
-            cheek_color_b: cursor.read_u8_le()?,
-            eye_liner: cursor.read_u8_le()?,
-            eye_liner_color_r: cursor.read_u8_le()?,
-            eye_liner_color_g: cursor.read_u8_le()?,
-            eye_liner_color_b: cursor.read_u8_le()?,
-            eye_shadow_lower: cursor.read_u8_le()?,
-            eye_shadow_lower_color_r: cursor.read_u8_le()?,
-            eye_shadow_lower_color_g: cursor.read_u8_le()?,
-            eye_shadow_lower_color_b: cursor.read_u8_le()?,
-            eye_shadow_upper: cursor.read_u8_le()?,
-            eye_shadow_upper_color_r: cursor.read_u8_le()?,
-            eye_shadow_upper_color_g: cursor.read_u8_le()?,
-            eye_shadow_upper_color_b: cursor.read_u8_le()?,
-            lip_stick: cursor.read_u8_le()?,
-            lip_stick_color_r: cursor.read_u8_le()?,
-            lip_stick_color_g: cursor.read_u8_le()?,
-            lip_stick_color_b: cursor.read_u8_le()?,
-            tattoo_mark_position_horizontal: cursor.read_u8_le()?,
-            tattoo_mark_position_vertical: cursor.read_u8_le()?,
-            tattoo_mark_angle: cursor.read_u8_le()?,
-            tattoo_mark_expansion: cursor.read_u8_le()?,
-            tattoo_mark_color_r: cursor.read_u8_le()?,
-            tattoo_mark_color_g: cursor.read_u8_le()?,
-            tattoo_mark_color_b: cursor.read_u8_le()?,
-            unk0xd8: cursor.read_u8_le()?,
-            tattoo_mark_flip: cursor.read_u8_le()?,
-            body_hair: cursor.read_u8_le()?,
-            body_hair_color_r: cursor.read_u8_le()?,
-            body_hair_color_g: cursor.read_u8_le()?,
-            body_hair_color_b: cursor.read_u8_le()?,
-            right_iris_color_r: cursor.read_u8_le()?,
-            right_iris_color_g: cursor.read_u8_le()?,
-            right_iris_color_b: cursor.read_u8_le()?,
-            right_iris_size: cursor.read_u8_le()?,
-            right_eye_clouding: cursor.read_u8_le()?,
-            right_eye_clouding_color_r: cursor.read_u8_le()?,
-            right_eye_clouding_color_g: cursor.read_u8_le()?,
-            right_eye_clouding_color_b: cursor.read_u8_le()?,
-            right_eye_white_color_r: cursor.read_u8_le()?,
-            right_eye_white_color_g: cursor.read_u8_le()?,
-            right_eye_white_color_b: cursor.read_u8_le()?,
-            right_eye_position: cursor.read_u8_le()?,
-            left_iris_color_r: cursor.read_u8_le()?,
-            left_iris_color_g: cursor.read_u8_le()?,
-            left_iris_color_b: cursor.read_u8_le()?,
-            left_iris_size: cursor.read_u8_le()?,
-            left_eye_clouding: cursor.read_u8_le()?,
-            left_eye_clouding_color_r: cursor.read_u8_le()?,
-            left_eye_clouding_color_g: cursor.read_u8_le()?,
-            left_eye_clouding_color_b: cursor.read_u8_le()?,
-            left_eye_white_color_r: cursor.read_u8_le()?,
-            left_eye_white_color_g: cursor.read_u8_le()?,
-            left_eye_white_color_b: cursor.read_u8_le()?,
-            left_eye_position: cursor.read_u8_le()?,
-            hair_color_r: cursor.read_u8_le()?,
-            hair_color_g: cursor.read_u8_le()?,
-            hair_color_b: cursor.read_u8_le()?,
-            luster: cursor.read_u8_le()?,
-            hair_root_darkness: cursor.read_u8_le()?,
-            white_hairs: cursor.read_u8_le()?,
-            beard_color_r: cursor.read_u8_le()?,
-            beard_color_g: cursor.read_u8_le()?,
-            beard_color_b: cursor.read_u8_le()?,
-            beard_luster: cursor.read_u8_le()?,
-            beard_root_darkness: cursor.read_u8_le()?,
-            beard_white_hairs: cursor.read_u8_le()?,
-            brow_color_r: cursor.read_u8_le()?,
-            brow_color_g: cursor.read_u8_le()?,
-            brow_color_b: cursor.read_u8_le()?,
-            brow_luster: cursor.read_u8_le()?,
-            brow_root_darkness: cursor.read_u8_le()?,
-            brow_white_hairs: cursor.read_u8_le()?,
-            eye_lash_color_r: cursor.read_u8_le()?,
-            eye_lash_color_g: cursor.read_u8_le()?,
-            eye_lash_color_b: cursor.read_u8_le()?,
-            eye_patch_color_r: cursor.read_u8_le()?,
-            eye_patch_color_g: cursor.read_u8_le()?,
-            eye_patch_color_b: cursor.read_u8_le()?,
-            pad: Self::read_pad(cursor)?,
-        })
-    }
-
-    pub fn read_unk0x00<R: Read>(
-        cursor: &mut CursorReader<R>,
-    ) -> io::Result<[u8; FACE_PRESET_UNK0X00]> {
-        let mut unk0x00 = [0u8; FACE_PRESET_UNK0X00];
-
-        cursor.read_exact(&mut unk0x00)?;
-
-        Ok(unk0x00)
-    }
-
-    pub fn read_unk0x6c<R: Read>(
-        cursor: &mut CursorReader<R>,
-    ) -> io::Result<Box<[u8; FACE_PRESET_UNK0X6C]>> {
-        let mut unk0x6c: Vec<u8> = vec![0u8; FACE_PRESET_UNK0X6C];
-
-        cursor.read_exact(&mut unk0x6c)?;
-
-        unk0x6c
-            .into_boxed_slice()
-            .try_into()
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "FacePreset: unk0x6c len"))
-    }
-
-    pub fn read_pad<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; FACE_PRESET_PAD]> {
-        let mut pad = [0u8; FACE_PRESET_PAD];
-
-        cursor.read_exact(&mut pad)?;
-
-        Ok(pad)
-    }
-}
-
-#[derive(Debug)]
-pub struct KeyConfigSaveLoad {
-    size: u32,
-    data: Vec<u8>,
-}
-
-impl KeyConfigSaveLoad {
-    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        cursor.discard(4)?;
-        let size = cursor.read_u32_le()?;
-        let data = if size > 0 && size < 0x100000 {
-            Self::read_data(cursor, size)?
-        } else {
-            Vec::new()
-        };
-
-        Ok(Self { size, data })
-    }
-
-    pub fn read_data<R: Read>(cursor: &mut CursorReader<R>, size: u32) -> io::Result<Vec<u8>> {
-        let mut data = vec![0u8; size as usize];
-        cursor.read_exact(&mut data)?;
-        Ok(data)
-    }
-}
-
-#[derive(Debug)]
 pub struct CharacterSlot {
     checksum: [u8; CHECKSUM_SIZE],
     user_data_x: UserDataX,
@@ -877,7 +77,7 @@ pub struct UserDataX {
     unk0x8: [u8; 8],
     unk0x10: [u8; 16],
     gaitem_map: Vec<Gaitem>,
-    pub(crate) player_game_data: PlayerGameData,
+    player_game_data: PlayerGameData,
     sp_effects: Box<[SPEffect; 13]>,
     equipped_items_equip_index: EquipmentSlots,
     active_weapon_slots_and_arm: ActiveWeaponSlotsAndArmStyle,
@@ -2380,4 +1580,804 @@ pub struct Gaitem {
     pub unk_0x14: Option<u32>,
     pub gem_gaitem_handle: Option<u32>,
     pub unk_0x1c: Option<u8>,
+}
+
+#[derive(Debug)]
+pub struct UserData10 {
+    md5: u128,
+    version: u32,
+    steam_id: u64,
+    settings: Settings,
+    menu_system_save_load: MenuSystemSaveLoad,
+    profile_summary: ProfileSummary,
+    pc_option_data: Box<[u8; PC_OPTION_DATA]>,
+    key_config_save_load: KeyConfigSaveLoad,
+}
+
+impl UserData10 {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        let start_pos = cursor.position();
+
+        let md5 = cursor.read_u128_le()?;
+        let version = cursor.read_u32_le()?;
+        let steam_id = cursor.read_u64_le()?;
+
+        let settings = Settings::read(cursor)?;
+
+        cursor.discard((start_pos + 16 + 4 + 8 + 0x140 - cursor.position()) as usize)?;
+
+        let menu_system_save_load = MenuSystemSaveLoad::read(cursor)?;
+        let profile_summary = ProfileSummary::read(cursor)?;
+
+        cursor.discard(5)?;
+
+        let pc_option_data = Self::read_pc_option_data(cursor)?;
+        let key_config_save_load = KeyConfigSaveLoad::read(cursor)?;
+
+        cursor.discard(8)?;
+
+        let bytes_read = cursor.position() - start_pos;
+
+        let remaining = 0x60010u64.saturating_sub(bytes_read);
+
+        if remaining > 0 {
+            cursor.discard(remaining as usize)?
+        };
+
+        Ok(Self {
+            md5,
+            version,
+            steam_id,
+            settings,
+            menu_system_save_load,
+            profile_summary,
+            pc_option_data,
+            key_config_save_load,
+        })
+    }
+
+    pub fn read_pc_option_data<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Box<[u8; PC_OPTION_DATA]>> {
+        let mut data = vec![0u8; PC_OPTION_DATA];
+
+        cursor.read_exact(&mut data)?;
+
+        data.into_boxed_slice()
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "PC_OPTION_DATA len"))
+    }
+}
+
+#[derive(Debug)]
+pub struct UserData11 {
+    data: Box<[u8; USER_DATA_11]>,
+}
+
+impl UserData11 {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        cursor.discard(16)?;
+
+        let mut data_buf = vec![0u8; USER_DATA_11];
+
+        cursor.read_exact(&mut data_buf)?;
+
+        Ok(Self {
+            data: data_buf
+                .into_boxed_slice()
+                .try_into()
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "USER_DATA_11 len"))?,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct Settings {
+    camera_speed: u8,
+    controller_vibration: u8,
+    brightness: u8,
+    sound_type: u8,
+    music_volume: u8,
+    sound_effects_volume: u8,
+    voice_volume: u8,
+    display_blood: u8,
+    subtitles: u8,
+    hud: u8,
+    camera_x_axis: u8,
+    camera_y_axis: u8,
+    toggle_auto_lockon: u8,
+    camera_auto_wall_recovery: u8,
+    unk0xe: u8,
+    unk0xf: u8,
+    reset_camera_y_axis: u8,
+    cinematic_effects: u8,
+    unk0x12: u8,
+    cross_region_play: u8,
+    voice_chat: u8,
+    display_player_names: u8,
+    manual_attack_aim: u8,
+    autotarget: u8,
+    launchsettings: u8,
+    send_summon_sign: u8,
+    unk0x1a: u8,
+    hdr: u8,
+    hdr_adjust_brightness: u8,
+    hdr_maximum_brightness: u8,
+    hdr_adjust_saturation: u8,
+    unk0x1f: u8,
+    master_volume: u8,
+    is_raytracing_on: u8,
+    mark_new_items: u8,
+    show_recent_tabs: u8,
+    unk0x24: u64,
+    unk0x2c: u16,
+    show_tutorials: u8,
+    camera_auto_rotation: u8,
+}
+
+impl Settings {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            camera_speed: cursor.read_u8_le()?,
+            controller_vibration: cursor.read_u8_le()?,
+            brightness: cursor.read_u8_le()?,
+            sound_type: cursor.read_u8_le()?,
+            music_volume: cursor.read_u8_le()?,
+            sound_effects_volume: cursor.read_u8_le()?,
+            voice_volume: cursor.read_u8_le()?,
+            display_blood: cursor.read_u8_le()?,
+            subtitles: cursor.read_u8_le()?,
+            hud: cursor.read_u8_le()?,
+            camera_x_axis: cursor.read_u8_le()?,
+            camera_y_axis: cursor.read_u8_le()?,
+            toggle_auto_lockon: cursor.read_u8_le()?,
+            camera_auto_wall_recovery: cursor.read_u8_le()?,
+            unk0xe: cursor.read_u8_le()?,
+            unk0xf: cursor.read_u8_le()?,
+            reset_camera_y_axis: cursor.read_u8_le()?,
+            cinematic_effects: cursor.read_u8_le()?,
+            unk0x12: cursor.read_u8_le()?,
+            cross_region_play: cursor.read_u8_le()?,
+            voice_chat: cursor.read_u8_le()?,
+            display_player_names: cursor.read_u8_le()?,
+            manual_attack_aim: cursor.read_u8_le()?,
+            autotarget: cursor.read_u8_le()?,
+            launchsettings: cursor.read_u8_le()?,
+            send_summon_sign: cursor.read_u8_le()?,
+            unk0x1a: cursor.read_u8_le()?,
+            hdr: cursor.read_u8_le()?,
+            hdr_adjust_brightness: cursor.read_u8_le()?,
+            hdr_maximum_brightness: cursor.read_u8_le()?,
+            hdr_adjust_saturation: cursor.read_u8_le()?,
+            unk0x1f: cursor.read_u8_le()?,
+            master_volume: cursor.read_u8_le()?,
+            is_raytracing_on: cursor.read_u8_le()?,
+            mark_new_items: cursor.read_u8_le()?,
+            show_recent_tabs: cursor.read_u8_le()?,
+            unk0x24: cursor.read_u64_le()?,
+            unk0x2c: cursor.read_u16_le()?,
+            show_tutorials: cursor.read_u8_le()?,
+            camera_auto_rotation: cursor.read_u8_le()?,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct MenuSystemSaveLoad {
+    raw_data: Box<[u8; MENU_SYSTEM_SAVE_LOAD]>,
+    // parsed: CSMenuSystemSaveLoad,
+}
+
+impl MenuSystemSaveLoad {
+    pub fn read_raw_data<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Box<[u8; MENU_SYSTEM_SAVE_LOAD]>> {
+        let mut presets: Vec<u8> = Vec::with_capacity(MENU_SYSTEM_SAVE_LOAD);
+
+        for _ in 0..MENU_SYSTEM_SAVE_LOAD {
+            presets.push(cursor.read_u8_le()?);
+        }
+
+        presets
+            .into_boxed_slice()
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "MENU_SYSTEM_SAVE_LOAD len"))
+    }
+
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            raw_data: Self::read_raw_data(cursor)?,
+        })
+    }
+}
+
+// Unused Parsed Version of Menu System Save Load:
+
+#[derive(Debug)]
+pub struct CSMenuSystemSaveLoad {
+    unk0x0: u16,
+    unk0x2: u16,
+    size: u32,
+    presets: Vec<FacePreset>,
+    padding: Box<[u8; CS_MENU_SYSTEM_SAVE_LOAD_PADDING]>,
+}
+
+impl CSMenuSystemSaveLoad {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            unk0x0: cursor.read_u16_le()?,
+            unk0x2: cursor.read_u16_le()?,
+            size: cursor.read_u32_le()?,
+            presets: Self::read_presets(cursor)?,
+            padding: Self::read_padding(cursor)?,
+        })
+    }
+
+    pub fn read_presets<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<FacePreset>> {
+        let mut presets: Vec<FacePreset> = Vec::with_capacity(FACE_PRESETS);
+
+        for _ in 0..FACE_PRESETS {
+            presets.push(FacePreset::read(cursor)?);
+        }
+
+        Ok(presets)
+    }
+
+    pub fn read_padding<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Box<[u8; CS_MENU_SYSTEM_SAVE_LOAD_PADDING]>> {
+        let mut presets: Vec<u8> = Vec::with_capacity(CS_MENU_SYSTEM_SAVE_LOAD_PADDING);
+
+        for _ in 0..CS_MENU_SYSTEM_SAVE_LOAD_PADDING {
+            presets.push(cursor.read_u8_le()?);
+        }
+
+        presets
+            .into_boxed_slice()
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "CS_MENU_SYSTEM_SAVE_LOAD len"))
+    }
+}
+
+#[derive(Debug)]
+pub struct ProfileSummary {
+    active_profiles: [u8; PROFILES],
+    profiles: Vec<Profile>,
+}
+
+impl ProfileSummary {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            active_profiles: Self::read_active_profiles(cursor)?,
+            profiles: Self::read_profiles(cursor)?,
+        })
+    }
+
+    pub fn read_active_profiles<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<[u8; PROFILES]> {
+        let mut active_profiles = [0u8; PROFILES];
+
+        cursor.read_exact(&mut active_profiles)?;
+
+        Ok(active_profiles)
+    }
+
+    pub fn read_profiles<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<Profile>> {
+        let mut profiles: Vec<Profile> = Vec::with_capacity(PROFILES);
+
+        for _ in 0..PROFILES {
+            profiles.push(Profile::read(cursor)?);
+        }
+
+        Ok(profiles)
+    }
+}
+
+#[derive(Debug)]
+pub struct Profile {
+    character_name: String, // (UTF-16LE, 16 chars max)
+    terminator: u16,
+    level: u32,
+    seconds_played: u32,
+    runes_memory: u32,
+    map_id: [u8; MAP_ID],
+    place_name_id: u32,
+    face_data: [u8; PROFILE_FACE_DATA],
+    equipment: ProfileEquipment,
+    body_type: u8,
+    archetype: u8,
+    starting_gift: u8,
+    unk_padding: [u8; PROFILE_UNK_PADDING],
+}
+
+impl Profile {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            character_name: cursor.read_utf16_le_to_string(CHARACTER_NAME)?,
+            terminator: cursor.read_u16_le()?,
+            level: cursor.read_u32_le()?,
+            seconds_played: cursor.read_u32_le()?,
+            runes_memory: cursor.read_u32_le()?,
+            map_id: Self::read_map_id(cursor)?,
+            place_name_id: cursor.read_u32_le()?,
+            face_data: Self::read_face_data(cursor)?,
+            equipment: ProfileEquipment::read(cursor)?,
+            body_type: cursor.read_u8_le()?,
+            archetype: cursor.read_u8_le()?,
+            starting_gift: cursor.read_u8_le()?,
+            unk_padding: Self::read_unk_padding(cursor)?,
+        })
+    }
+
+    pub fn read_map_id<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; MAP_ID]> {
+        let mut map_id = [0u8; MAP_ID];
+
+        cursor.read_exact(&mut map_id)?;
+
+        Ok(map_id)
+    }
+
+    pub fn read_face_data<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<[u8; PROFILE_FACE_DATA]> {
+        let mut face_data = [0u8; PROFILE_FACE_DATA];
+
+        cursor.read_exact(&mut face_data)?;
+
+        Ok(face_data)
+    }
+
+    pub fn read_unk_padding<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<[u8; PROFILE_UNK_PADDING]> {
+        let mut unk_padding = [0u8; PROFILE_UNK_PADDING];
+
+        cursor.read_exact(&mut unk_padding)?;
+
+        Ok(unk_padding)
+    }
+}
+
+#[derive(Debug)]
+pub struct ProfileEquipment {
+    raw_data: [u8; PROFILE_EQUIPMENT_RAW],
+}
+
+impl ProfileEquipment {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            raw_data: Self::read_raw_data(cursor)?,
+        })
+    }
+
+    pub fn read_raw_data<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<[u8; PROFILE_EQUIPMENT_RAW]> {
+        let mut raw_data = [0u8; PROFILE_EQUIPMENT_RAW];
+
+        cursor.read_exact(&mut raw_data)?;
+
+        Ok(raw_data)
+    }
+}
+
+#[derive(Debug)]
+pub struct FacePreset {
+    unk0x00: [u8; FACE_PRESET_UNK0X00],
+    face_data_marker: i32,
+    magic: u32,
+    alignment: u8,
+    size: u8,
+    face_model: u8,
+    hair_model: u8,
+    unk0x14: u8,
+    eyebrow_model: u8,
+    beard_model: u8,
+    eyepatch_model: u8,
+    unk0x24: u8,
+    unk0x28: u8,
+    apparent_age: u8,
+    facial_aesthetic: u8,
+    form_emphasis: u8,
+    unk0x2f: u8,
+    brow_ridge_height: u8,
+    inner_brow_ridge: u8,
+    outer_brow_ridge: u8,
+    cheekbone_height: u8,
+    cheekbone_depth: u8,
+    cheekbone_width: u8,
+    cheekbone_protrusion: u8,
+    cheeks: u8,
+    chin_tip_position: u8,
+    chin_length: u8,
+    chin_protrusion: u8,
+    chin_depth: u8,
+    chin_size: u8,
+    chin_height: u8,
+    chin_width: u8,
+    eye_position: u8,
+    eye_size: u8,
+    eye_slant: u8,
+    eye_spacing: u8,
+    nose_size: u8,
+    nose_forehead_ratio: u8,
+    unk0x45: u8,
+    face_protrusion: u8,
+    vertical_face_ratio: u8,
+    facial_feature_slant: u8,
+    horizontal_face_ratio: u8,
+    unk0x4a: u8,
+    forehead_depth: u8,
+    forehead_protrusion: u8,
+    unk0x4d: u8,
+    jaw_protrusion: u8,
+    jaw_width: u8,
+    lower_jaw: u8,
+    jaw_contour: u8,
+    lip_shape: u8,
+    lip_size: u8,
+    lip_fullness: u8,
+    mouth_expression: u8,
+    lip_protrusion: u8,
+    lip_thickness: u8,
+    mouth_protrusion: u8,
+    mouth_slant: u8,
+    occlusion: u8,
+    mouth_position: u8,
+    mouth_width: u8,
+    mouth_chin_distance: u8,
+    nose_ridge_depth: u8,
+    nose_ridge_length: u8,
+    nose_position: u8,
+    nose_tip_height: u8,
+    nostril_slant: u8,
+    nostril_size: u8,
+    nostril_width: u8,
+    nose_protrusion: u8,
+    nose_bridge_height: u8,
+    bridge_protrusion1: u8,
+    bridge_protrusion2: u8,
+    nose_bridge_width: u8,
+    nose_height: u8,
+    nose_slant: u8,
+    unk0x6c: Box<[u8; FACE_PRESET_UNK0X6C]>,
+    head_size: u8,
+    chest_size: u8,
+    abdomen_size: u8,
+    arms_size: u8,
+    legs_size: u8,
+    unk0xb1: u16,
+    skin_color_r: u8,
+    skin_color_g: u8,
+    skin_color_b: u8,
+    skin_luster: u8,
+    pores: u8,
+    stubble: u8,
+    dark_circles: u8,
+    dark_circle_color_r: u8,
+    dark_circle_color_g: u8,
+    dark_circle_color_b: u8,
+    cheeks_color_intensity: u8,
+    cheek_color_r: u8,
+    cheek_color_g: u8,
+    cheek_color_b: u8,
+    eye_liner: u8,
+    eye_liner_color_r: u8,
+    eye_liner_color_g: u8,
+    eye_liner_color_b: u8,
+    eye_shadow_lower: u8,
+    eye_shadow_lower_color_r: u8,
+    eye_shadow_lower_color_g: u8,
+    eye_shadow_lower_color_b: u8,
+    eye_shadow_upper: u8,
+    eye_shadow_upper_color_r: u8,
+    eye_shadow_upper_color_g: u8,
+    eye_shadow_upper_color_b: u8,
+    lip_stick: u8,
+    lip_stick_color_r: u8,
+    lip_stick_color_g: u8,
+    lip_stick_color_b: u8,
+    tattoo_mark_position_horizontal: u8,
+    tattoo_mark_position_vertical: u8,
+    tattoo_mark_angle: u8,
+    tattoo_mark_expansion: u8,
+    tattoo_mark_color_r: u8,
+    tattoo_mark_color_g: u8,
+    tattoo_mark_color_b: u8,
+    unk0xd8: u8,
+    tattoo_mark_flip: u8,
+    body_hair: u8,
+    body_hair_color_r: u8,
+    body_hair_color_g: u8,
+    body_hair_color_b: u8,
+    right_iris_color_r: u8,
+    right_iris_color_g: u8,
+    right_iris_color_b: u8,
+    right_iris_size: u8,
+    right_eye_clouding: u8,
+    right_eye_clouding_color_r: u8,
+    right_eye_clouding_color_g: u8,
+    right_eye_clouding_color_b: u8,
+    right_eye_white_color_r: u8,
+    right_eye_white_color_g: u8,
+    right_eye_white_color_b: u8,
+    right_eye_position: u8,
+    left_iris_color_r: u8,
+    left_iris_color_g: u8,
+    left_iris_color_b: u8,
+    left_iris_size: u8,
+    left_eye_clouding: u8,
+    left_eye_clouding_color_r: u8,
+    left_eye_clouding_color_g: u8,
+    left_eye_clouding_color_b: u8,
+    left_eye_white_color_r: u8,
+    left_eye_white_color_g: u8,
+    left_eye_white_color_b: u8,
+    left_eye_position: u8,
+    hair_color_r: u8,
+    hair_color_g: u8,
+    hair_color_b: u8,
+    luster: u8,
+    hair_root_darkness: u8,
+    white_hairs: u8,
+    beard_color_r: u8,
+    beard_color_g: u8,
+    beard_color_b: u8,
+    beard_luster: u8,
+    beard_root_darkness: u8,
+    beard_white_hairs: u8,
+    brow_color_r: u8,
+    brow_color_g: u8,
+    brow_color_b: u8,
+    brow_luster: u8,
+    brow_root_darkness: u8,
+    brow_white_hairs: u8,
+    eye_lash_color_r: u8,
+    eye_lash_color_g: u8,
+    eye_lash_color_b: u8,
+    eye_patch_color_r: u8,
+    eye_patch_color_g: u8,
+    eye_patch_color_b: u8,
+    pad: [u8; FACE_PRESET_PAD],
+}
+
+impl FacePreset {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            unk0x00: Self::read_unk0x00(cursor)?,
+            face_data_marker: cursor.read_i32_le()?,
+            magic: cursor.read_u32_le()?,
+            alignment: cursor.read_u8_le()?,
+            size: cursor.read_u8_le()?,
+            face_model: cursor.read_u8_le()?,
+            hair_model: cursor.read_u8_le()?,
+            unk0x14: cursor.read_u8_le()?,
+            eyebrow_model: cursor.read_u8_le()?,
+            beard_model: cursor.read_u8_le()?,
+            eyepatch_model: cursor.read_u8_le()?,
+            unk0x24: cursor.read_u8_le()?,
+            unk0x28: cursor.read_u8_le()?,
+            apparent_age: cursor.read_u8_le()?,
+            facial_aesthetic: cursor.read_u8_le()?,
+            form_emphasis: cursor.read_u8_le()?,
+            unk0x2f: cursor.read_u8_le()?,
+            brow_ridge_height: cursor.read_u8_le()?,
+            inner_brow_ridge: cursor.read_u8_le()?,
+            outer_brow_ridge: cursor.read_u8_le()?,
+            cheekbone_height: cursor.read_u8_le()?,
+            cheekbone_depth: cursor.read_u8_le()?,
+            cheekbone_width: cursor.read_u8_le()?,
+            cheekbone_protrusion: cursor.read_u8_le()?,
+            cheeks: cursor.read_u8_le()?,
+            chin_tip_position: cursor.read_u8_le()?,
+            chin_length: cursor.read_u8_le()?,
+            chin_protrusion: cursor.read_u8_le()?,
+            chin_depth: cursor.read_u8_le()?,
+            chin_size: cursor.read_u8_le()?,
+            chin_height: cursor.read_u8_le()?,
+            chin_width: cursor.read_u8_le()?,
+            eye_position: cursor.read_u8_le()?,
+            eye_size: cursor.read_u8_le()?,
+            eye_slant: cursor.read_u8_le()?,
+            eye_spacing: cursor.read_u8_le()?,
+            nose_size: cursor.read_u8_le()?,
+            nose_forehead_ratio: cursor.read_u8_le()?,
+            unk0x45: cursor.read_u8_le()?,
+            face_protrusion: cursor.read_u8_le()?,
+            vertical_face_ratio: cursor.read_u8_le()?,
+            facial_feature_slant: cursor.read_u8_le()?,
+            horizontal_face_ratio: cursor.read_u8_le()?,
+            unk0x4a: cursor.read_u8_le()?,
+            forehead_depth: cursor.read_u8_le()?,
+            forehead_protrusion: cursor.read_u8_le()?,
+            unk0x4d: cursor.read_u8_le()?,
+            jaw_protrusion: cursor.read_u8_le()?,
+            jaw_width: cursor.read_u8_le()?,
+            lower_jaw: cursor.read_u8_le()?,
+            jaw_contour: cursor.read_u8_le()?,
+            lip_shape: cursor.read_u8_le()?,
+            lip_size: cursor.read_u8_le()?,
+            lip_fullness: cursor.read_u8_le()?,
+            mouth_expression: cursor.read_u8_le()?,
+            lip_protrusion: cursor.read_u8_le()?,
+            lip_thickness: cursor.read_u8_le()?,
+            mouth_protrusion: cursor.read_u8_le()?,
+            mouth_slant: cursor.read_u8_le()?,
+            occlusion: cursor.read_u8_le()?,
+            mouth_position: cursor.read_u8_le()?,
+            mouth_width: cursor.read_u8_le()?,
+            mouth_chin_distance: cursor.read_u8_le()?,
+            nose_ridge_depth: cursor.read_u8_le()?,
+            nose_ridge_length: cursor.read_u8_le()?,
+            nose_position: cursor.read_u8_le()?,
+            nose_tip_height: cursor.read_u8_le()?,
+            nostril_slant: cursor.read_u8_le()?,
+            nostril_size: cursor.read_u8_le()?,
+            nostril_width: cursor.read_u8_le()?,
+            nose_protrusion: cursor.read_u8_le()?,
+            nose_bridge_height: cursor.read_u8_le()?,
+            bridge_protrusion1: cursor.read_u8_le()?,
+            bridge_protrusion2: cursor.read_u8_le()?,
+            nose_bridge_width: cursor.read_u8_le()?,
+            nose_height: cursor.read_u8_le()?,
+            nose_slant: cursor.read_u8_le()?,
+            unk0x6c: Self::read_unk0x6c(cursor)?,
+            head_size: cursor.read_u8_le()?,
+            chest_size: cursor.read_u8_le()?,
+            abdomen_size: cursor.read_u8_le()?,
+            arms_size: cursor.read_u8_le()?,
+            legs_size: cursor.read_u8_le()?,
+            unk0xb1: cursor.read_u16_le()?,
+            skin_color_r: cursor.read_u8_le()?,
+            skin_color_g: cursor.read_u8_le()?,
+            skin_color_b: cursor.read_u8_le()?,
+            skin_luster: cursor.read_u8_le()?,
+            pores: cursor.read_u8_le()?,
+            stubble: cursor.read_u8_le()?,
+            dark_circles: cursor.read_u8_le()?,
+            dark_circle_color_r: cursor.read_u8_le()?,
+            dark_circle_color_g: cursor.read_u8_le()?,
+            dark_circle_color_b: cursor.read_u8_le()?,
+            cheeks_color_intensity: cursor.read_u8_le()?,
+            cheek_color_r: cursor.read_u8_le()?,
+            cheek_color_g: cursor.read_u8_le()?,
+            cheek_color_b: cursor.read_u8_le()?,
+            eye_liner: cursor.read_u8_le()?,
+            eye_liner_color_r: cursor.read_u8_le()?,
+            eye_liner_color_g: cursor.read_u8_le()?,
+            eye_liner_color_b: cursor.read_u8_le()?,
+            eye_shadow_lower: cursor.read_u8_le()?,
+            eye_shadow_lower_color_r: cursor.read_u8_le()?,
+            eye_shadow_lower_color_g: cursor.read_u8_le()?,
+            eye_shadow_lower_color_b: cursor.read_u8_le()?,
+            eye_shadow_upper: cursor.read_u8_le()?,
+            eye_shadow_upper_color_r: cursor.read_u8_le()?,
+            eye_shadow_upper_color_g: cursor.read_u8_le()?,
+            eye_shadow_upper_color_b: cursor.read_u8_le()?,
+            lip_stick: cursor.read_u8_le()?,
+            lip_stick_color_r: cursor.read_u8_le()?,
+            lip_stick_color_g: cursor.read_u8_le()?,
+            lip_stick_color_b: cursor.read_u8_le()?,
+            tattoo_mark_position_horizontal: cursor.read_u8_le()?,
+            tattoo_mark_position_vertical: cursor.read_u8_le()?,
+            tattoo_mark_angle: cursor.read_u8_le()?,
+            tattoo_mark_expansion: cursor.read_u8_le()?,
+            tattoo_mark_color_r: cursor.read_u8_le()?,
+            tattoo_mark_color_g: cursor.read_u8_le()?,
+            tattoo_mark_color_b: cursor.read_u8_le()?,
+            unk0xd8: cursor.read_u8_le()?,
+            tattoo_mark_flip: cursor.read_u8_le()?,
+            body_hair: cursor.read_u8_le()?,
+            body_hair_color_r: cursor.read_u8_le()?,
+            body_hair_color_g: cursor.read_u8_le()?,
+            body_hair_color_b: cursor.read_u8_le()?,
+            right_iris_color_r: cursor.read_u8_le()?,
+            right_iris_color_g: cursor.read_u8_le()?,
+            right_iris_color_b: cursor.read_u8_le()?,
+            right_iris_size: cursor.read_u8_le()?,
+            right_eye_clouding: cursor.read_u8_le()?,
+            right_eye_clouding_color_r: cursor.read_u8_le()?,
+            right_eye_clouding_color_g: cursor.read_u8_le()?,
+            right_eye_clouding_color_b: cursor.read_u8_le()?,
+            right_eye_white_color_r: cursor.read_u8_le()?,
+            right_eye_white_color_g: cursor.read_u8_le()?,
+            right_eye_white_color_b: cursor.read_u8_le()?,
+            right_eye_position: cursor.read_u8_le()?,
+            left_iris_color_r: cursor.read_u8_le()?,
+            left_iris_color_g: cursor.read_u8_le()?,
+            left_iris_color_b: cursor.read_u8_le()?,
+            left_iris_size: cursor.read_u8_le()?,
+            left_eye_clouding: cursor.read_u8_le()?,
+            left_eye_clouding_color_r: cursor.read_u8_le()?,
+            left_eye_clouding_color_g: cursor.read_u8_le()?,
+            left_eye_clouding_color_b: cursor.read_u8_le()?,
+            left_eye_white_color_r: cursor.read_u8_le()?,
+            left_eye_white_color_g: cursor.read_u8_le()?,
+            left_eye_white_color_b: cursor.read_u8_le()?,
+            left_eye_position: cursor.read_u8_le()?,
+            hair_color_r: cursor.read_u8_le()?,
+            hair_color_g: cursor.read_u8_le()?,
+            hair_color_b: cursor.read_u8_le()?,
+            luster: cursor.read_u8_le()?,
+            hair_root_darkness: cursor.read_u8_le()?,
+            white_hairs: cursor.read_u8_le()?,
+            beard_color_r: cursor.read_u8_le()?,
+            beard_color_g: cursor.read_u8_le()?,
+            beard_color_b: cursor.read_u8_le()?,
+            beard_luster: cursor.read_u8_le()?,
+            beard_root_darkness: cursor.read_u8_le()?,
+            beard_white_hairs: cursor.read_u8_le()?,
+            brow_color_r: cursor.read_u8_le()?,
+            brow_color_g: cursor.read_u8_le()?,
+            brow_color_b: cursor.read_u8_le()?,
+            brow_luster: cursor.read_u8_le()?,
+            brow_root_darkness: cursor.read_u8_le()?,
+            brow_white_hairs: cursor.read_u8_le()?,
+            eye_lash_color_r: cursor.read_u8_le()?,
+            eye_lash_color_g: cursor.read_u8_le()?,
+            eye_lash_color_b: cursor.read_u8_le()?,
+            eye_patch_color_r: cursor.read_u8_le()?,
+            eye_patch_color_g: cursor.read_u8_le()?,
+            eye_patch_color_b: cursor.read_u8_le()?,
+            pad: Self::read_pad(cursor)?,
+        })
+    }
+
+    pub fn read_unk0x00<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<[u8; FACE_PRESET_UNK0X00]> {
+        let mut unk0x00 = [0u8; FACE_PRESET_UNK0X00];
+
+        cursor.read_exact(&mut unk0x00)?;
+
+        Ok(unk0x00)
+    }
+
+    pub fn read_unk0x6c<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Box<[u8; FACE_PRESET_UNK0X6C]>> {
+        let mut unk0x6c: Vec<u8> = vec![0u8; FACE_PRESET_UNK0X6C];
+
+        cursor.read_exact(&mut unk0x6c)?;
+
+        unk0x6c
+            .into_boxed_slice()
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "FacePreset: unk0x6c len"))
+    }
+
+    pub fn read_pad<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; FACE_PRESET_PAD]> {
+        let mut pad = [0u8; FACE_PRESET_PAD];
+
+        cursor.read_exact(&mut pad)?;
+
+        Ok(pad)
+    }
+}
+
+#[derive(Debug)]
+pub struct KeyConfigSaveLoad {
+    size: u32,
+    data: Vec<u8>,
+}
+
+impl KeyConfigSaveLoad {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        cursor.discard(4)?;
+        let size = cursor.read_u32_le()?;
+        let data = if size > 0 && size < 0x100000 {
+            Self::read_data(cursor, size)?
+        } else {
+            Vec::new()
+        };
+
+        Ok(Self { size, data })
+    }
+
+    pub fn read_data<R: Read>(cursor: &mut CursorReader<R>, size: u32) -> io::Result<Vec<u8>> {
+        let mut data = vec![0u8; size as usize];
+        cursor.read_exact(&mut data)?;
+        Ok(data)
+    }
 }
