@@ -1,6 +1,24 @@
 #![allow(dead_code)]
 
 pub const CHARACTER_SLOTS: usize = 10;
+pub const USER_DATA_11: usize = 2_359_312; // 0x240010
+pub const PROFILES: usize = CHARACTER_SLOTS;
+
+pub const PC_OPTION_DATA: usize = 178; //0xB2
+
+pub const MENU_SYSTEM_SAVE_LOAD: usize = 6_152; // 0x1808
+pub const FACE_PRESETS: usize = 15;
+pub const CS_MENU_SYSTEM_SAVE_LOAD_PADDING: usize = 1_576;
+pub const CHARACTER_NAME: usize = 16;
+pub const PROFILE_FACE_DATA: usize = 292; // 0x124
+pub const PROFILE_UNK_PADDING: usize = 7;
+pub const MAP_ID: usize = 4;
+
+pub const PROFILE_EQUIPMENT_RAW: usize = 232; //0xE8
+
+pub const FACE_PRESET_UNK0X00: usize = 20;
+pub const FACE_PRESET_UNK0X6C: usize = 512;
+pub const FACE_PRESET_PAD: usize = 10;
 
 pub const PC_CHARACTER_SLOT_SIZE: usize = 0x280010;
 

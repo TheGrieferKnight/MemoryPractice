@@ -50,29 +50,6 @@ impl EldenRingSave {
 }
 
 #[derive(Debug)]
-pub struct UserData11 {
-    data: Box<[u8; 0x240010]>,
-}
-
-impl UserData11 {
-    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        cursor.discard(16)?;
-
-        let mut data_buf = vec![0u8; 0x240_010_usize];
-
-        cursor.read_exact(&mut data_buf)?;
-
-        Ok(Self {
-            data: data_buf
-                .into_boxed_slice()
-                .try_into()
-                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "USER_DATA_11 len"))?,
-        })
-    }
-}
-
-#[allow(non_camel_case_types, non_snake_case)]
-#[derive(Debug)]
 pub struct UserData10 {
     md5: u128,
     version: u32,
@@ -80,23 +57,11 @@ pub struct UserData10 {
     settings: Settings,
     menu_system_save_load: MenuSystemSaveLoad,
     profile_summary: ProfileSummary,
-    pc_option_data: Box<[u8; 0xB2]>,
+    pc_option_data: Box<[u8; PC_OPTION_DATA]>,
     key_config_save_load: KeyConfigSaveLoad,
 }
 
 impl UserData10 {
-    pub fn read_pc_option_data<R: Read>(
-        cursor: &mut CursorReader<R>,
-    ) -> io::Result<Box<[u8; 0xB2]>> {
-        let mut data = vec![0u8; 0xB2_usize];
-
-        cursor.read_exact(&mut data)?;
-
-        data.into_boxed_slice()
-            .try_into()
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "netman len"))
-    }
-
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
         let start_pos = cursor.position();
 
@@ -137,122 +102,38 @@ impl UserData10 {
             key_config_save_load,
         })
     }
-}
 
-#[derive(Debug)]
-pub struct ProfileSummary {
-    active_profiles: [u8; 10],
-    profiles: Box<[Profile; 10]>,
-}
+    pub fn read_pc_option_data<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Box<[u8; PC_OPTION_DATA]>> {
+        let mut data = vec![0u8; PC_OPTION_DATA];
 
-impl ProfileSummary {
-    pub fn read_active_profiles<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 10]> {
-        let mut active_profiles = [0u8; 10];
+        cursor.read_exact(&mut data)?;
 
-        cursor.read_exact(&mut active_profiles)?;
-
-        Ok(active_profiles)
-    }
-
-    pub fn read_profiles<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Box<[Profile; 10]>> {
-        let mut profiles: Vec<Profile> = Vec::with_capacity(10);
-
-        for _ in 0..10 {
-            profiles.push(Profile::read(cursor)?);
-        }
-
-        profiles
-            .into_boxed_slice()
+        data.into_boxed_slice()
             .try_into()
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "profiles len"))
-    }
-
-    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {
-            active_profiles: Self::read_active_profiles(cursor)?,
-            profiles: Self::read_profiles(cursor)?,
-        })
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "PC_OPTION_DATA len"))
     }
 }
 
 #[derive(Debug)]
-pub struct Profile {
-    character_name: String, // (UTF-16LE, 16 chars max)
-    terminator: u16,
-    level: u32,
-    seconds_played: u32,
-    runes_memory: u32,
-    map_id: [u8; 4],
-    place_name_id: u32,
-    face_data: [u8; 0x124],
-    equipment: ProfileEquipment,
-    body_type: u8,
-    archetype: u8,
-    starting_gift: u8,
-    unk_padding: [u8; 7],
+pub struct UserData11 {
+    data: Box<[u8; USER_DATA_11]>,
 }
 
-impl Profile {
-    pub fn read_map_id<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 4]> {
-        let mut map_id = [0u8; 4];
-
-        cursor.read_exact(&mut map_id)?;
-
-        Ok(map_id)
-    }
-
-    pub fn read_face_data<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 0x124]> {
-        let mut face_data = [0u8; 0x124];
-
-        cursor.read_exact(&mut face_data)?;
-
-        Ok(face_data)
-    }
-
-    pub fn read_unk_padding<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 7]> {
-        let mut unk_padding = [0u8; 7];
-
-        cursor.read_exact(&mut unk_padding)?;
-
-        Ok(unk_padding)
-    }
-
+impl UserData11 {
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        cursor.discard(16)?;
+
+        let mut data_buf = vec![0u8; USER_DATA_11];
+
+        cursor.read_exact(&mut data_buf)?;
+
         Ok(Self {
-            character_name: cursor.read_utf16_le_to_string(16)?,
-            terminator: cursor.read_u16_le()?,
-            level: cursor.read_u32_le()?,
-            seconds_played: cursor.read_u32_le()?,
-            runes_memory: cursor.read_u32_le()?,
-            map_id: Self::read_map_id(cursor)?,
-            place_name_id: cursor.read_u32_le()?,
-            face_data: Self::read_face_data(cursor)?,
-            equipment: ProfileEquipment::read(cursor)?,
-            body_type: cursor.read_u8_le()?,
-            archetype: cursor.read_u8_le()?,
-            starting_gift: cursor.read_u8_le()?,
-            unk_padding: Self::read_unk_padding(cursor)?,
-        })
-    }
-}
-
-#[derive(Debug)]
-pub struct ProfileEquipment {
-    raw_data: [u8; 0xE8],
-}
-
-impl ProfileEquipment {
-    pub fn read_raw_data<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 0xE8]> {
-        let mut raw_data = [0u8; 0xE8];
-
-        cursor.read_exact(&mut raw_data)?;
-
-        Ok(raw_data)
-    }
-
-    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {
-            raw_data: Self::read_raw_data(cursor)?,
+            data: data_buf
+                .into_boxed_slice()
+                .try_into()
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "USER_DATA_11 len"))?,
         })
     }
 }
@@ -349,43 +230,46 @@ impl Settings {
 }
 
 #[derive(Debug)]
-pub struct CSMenuSystemSaveLoad {
-    unk0x0: u16,
-    unk0x2: u16,
-    size: u32,
-    presets: Box<[FacePreset; 15]>,
-    padding: Box<[u8; 1576]>,
+pub struct MenuSystemSaveLoad {
+    raw_data: Box<[u8; MENU_SYSTEM_SAVE_LOAD]>,
+    // parsed: CSMenuSystemSaveLoad,
 }
 
-impl CSMenuSystemSaveLoad {
-    pub fn read_presets<R: Read>(
+impl MenuSystemSaveLoad {
+    pub fn read_raw_data<R: Read>(
         cursor: &mut CursorReader<R>,
-    ) -> io::Result<Box<[FacePreset; 15]>> {
-        let mut presets: Vec<FacePreset> = Vec::with_capacity(15);
+    ) -> io::Result<Box<[u8; MENU_SYSTEM_SAVE_LOAD]>> {
+        let mut presets: Vec<u8> = Vec::with_capacity(MENU_SYSTEM_SAVE_LOAD);
 
-        for _ in 0..15 {
-            presets.push(FacePreset::read(cursor)?);
-        }
-
-        presets
-            .into_boxed_slice()
-            .try_into()
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "presets len"))
-    }
-
-    pub fn read_padding<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Box<[u8; 1576]>> {
-        let mut presets: Vec<u8> = Vec::with_capacity(1576);
-
-        for _ in 0..1576 {
+        for _ in 0..MENU_SYSTEM_SAVE_LOAD {
             presets.push(cursor.read_u8_le()?);
         }
 
         presets
             .into_boxed_slice()
             .try_into()
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "presets len"))
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "MENU_SYSTEM_SAVE_LOAD len"))
     }
 
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            raw_data: Self::read_raw_data(cursor)?,
+        })
+    }
+}
+
+// Unused Parsed Version of Menu System Save Load:
+
+#[derive(Debug)]
+pub struct CSMenuSystemSaveLoad {
+    unk0x0: u16,
+    unk0x2: u16,
+    size: u32,
+    presets: Vec<FacePreset>,
+    padding: Box<[u8; CS_MENU_SYSTEM_SAVE_LOAD_PADDING]>,
+}
+
+impl CSMenuSystemSaveLoad {
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
         Ok(Self {
             unk0x0: cursor.read_u16_le()?,
@@ -395,11 +279,159 @@ impl CSMenuSystemSaveLoad {
             padding: Self::read_padding(cursor)?,
         })
     }
+
+    pub fn read_presets<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<FacePreset>> {
+        let mut presets: Vec<FacePreset> = Vec::with_capacity(FACE_PRESETS);
+
+        for _ in 0..FACE_PRESETS {
+            presets.push(FacePreset::read(cursor)?);
+        }
+
+        Ok(presets)
+    }
+
+    pub fn read_padding<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Box<[u8; CS_MENU_SYSTEM_SAVE_LOAD_PADDING]>> {
+        let mut presets: Vec<u8> = Vec::with_capacity(CS_MENU_SYSTEM_SAVE_LOAD_PADDING);
+
+        for _ in 0..CS_MENU_SYSTEM_SAVE_LOAD_PADDING {
+            presets.push(cursor.read_u8_le()?);
+        }
+
+        presets
+            .into_boxed_slice()
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "CS_MENU_SYSTEM_SAVE_LOAD len"))
+    }
+}
+
+#[derive(Debug)]
+pub struct ProfileSummary {
+    active_profiles: [u8; PROFILES],
+    profiles: Vec<Profile>,
+}
+
+impl ProfileSummary {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            active_profiles: Self::read_active_profiles(cursor)?,
+            profiles: Self::read_profiles(cursor)?,
+        })
+    }
+
+    pub fn read_active_profiles<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<[u8; PROFILES]> {
+        let mut active_profiles = [0u8; PROFILES];
+
+        cursor.read_exact(&mut active_profiles)?;
+
+        Ok(active_profiles)
+    }
+
+    pub fn read_profiles<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Vec<Profile>> {
+        let mut profiles: Vec<Profile> = Vec::with_capacity(PROFILES);
+
+        for _ in 0..PROFILES {
+            profiles.push(Profile::read(cursor)?);
+        }
+
+        Ok(profiles)
+    }
+}
+
+#[derive(Debug)]
+pub struct Profile {
+    character_name: String, // (UTF-16LE, 16 chars max)
+    terminator: u16,
+    level: u32,
+    seconds_played: u32,
+    runes_memory: u32,
+    map_id: [u8; MAP_ID],
+    place_name_id: u32,
+    face_data: [u8; PROFILE_FACE_DATA],
+    equipment: ProfileEquipment,
+    body_type: u8,
+    archetype: u8,
+    starting_gift: u8,
+    unk_padding: [u8; PROFILE_UNK_PADDING],
+}
+
+impl Profile {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            character_name: cursor.read_utf16_le_to_string(CHARACTER_NAME)?,
+            terminator: cursor.read_u16_le()?,
+            level: cursor.read_u32_le()?,
+            seconds_played: cursor.read_u32_le()?,
+            runes_memory: cursor.read_u32_le()?,
+            map_id: Self::read_map_id(cursor)?,
+            place_name_id: cursor.read_u32_le()?,
+            face_data: Self::read_face_data(cursor)?,
+            equipment: ProfileEquipment::read(cursor)?,
+            body_type: cursor.read_u8_le()?,
+            archetype: cursor.read_u8_le()?,
+            starting_gift: cursor.read_u8_le()?,
+            unk_padding: Self::read_unk_padding(cursor)?,
+        })
+    }
+
+    pub fn read_map_id<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; MAP_ID]> {
+        let mut map_id = [0u8; MAP_ID];
+
+        cursor.read_exact(&mut map_id)?;
+
+        Ok(map_id)
+    }
+
+    pub fn read_face_data<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<[u8; PROFILE_FACE_DATA]> {
+        let mut face_data = [0u8; PROFILE_FACE_DATA];
+
+        cursor.read_exact(&mut face_data)?;
+
+        Ok(face_data)
+    }
+
+    pub fn read_unk_padding<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<[u8; PROFILE_UNK_PADDING]> {
+        let mut unk_padding = [0u8; PROFILE_UNK_PADDING];
+
+        cursor.read_exact(&mut unk_padding)?;
+
+        Ok(unk_padding)
+    }
+}
+
+#[derive(Debug)]
+pub struct ProfileEquipment {
+    raw_data: [u8; PROFILE_EQUIPMENT_RAW],
+}
+
+impl ProfileEquipment {
+    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
+        Ok(Self {
+            raw_data: Self::read_raw_data(cursor)?,
+        })
+    }
+
+    pub fn read_raw_data<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<[u8; PROFILE_EQUIPMENT_RAW]> {
+        let mut raw_data = [0u8; PROFILE_EQUIPMENT_RAW];
+
+        cursor.read_exact(&mut raw_data)?;
+
+        Ok(raw_data)
+    }
 }
 
 #[derive(Debug)]
 pub struct FacePreset {
-    unk0x00: [u8; 20],
+    unk0x00: [u8; FACE_PRESET_UNK0X00],
     face_data_marker: i32,
     magic: u32,
     alignment: u8,
@@ -476,7 +508,7 @@ pub struct FacePreset {
     nose_bridge_width: u8,
     nose_height: u8,
     nose_slant: u8,
-    unk0x6c: Box<[u8; 512]>,
+    unk0x6c: Box<[u8; FACE_PRESET_UNK0X6C]>,
     head_size: u8,
     chest_size: u8,
     abdomen_size: u8,
@@ -574,37 +606,10 @@ pub struct FacePreset {
     eye_patch_color_r: u8,
     eye_patch_color_g: u8,
     eye_patch_color_b: u8,
-    pad: [u8; 10],
+    pad: [u8; FACE_PRESET_PAD],
 }
 
 impl FacePreset {
-    pub fn read_pad<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 10]> {
-        let mut pad = [0u8; 10];
-
-        cursor.read_exact(&mut pad)?;
-
-        Ok(pad)
-    }
-
-    pub fn read_unk0x6c<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Box<[u8; 512]>> {
-        let mut unk0x6c: Vec<u8> = vec![0u8; 512];
-
-        cursor.read_exact(&mut unk0x6c)?;
-
-        unk0x6c
-            .into_boxed_slice()
-            .try_into()
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "FacePreset: unk0x6c len"))
-    }
-
-    pub fn read_unk0x00<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; 20]> {
-        let mut unk0x00 = [0u8; 20];
-
-        cursor.read_exact(&mut unk0x00)?;
-
-        Ok(unk0x00)
-    }
-
     pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
         Ok(Self {
             unk0x00: Self::read_unk0x00(cursor)?,
@@ -785,32 +790,36 @@ impl FacePreset {
             pad: Self::read_pad(cursor)?,
         })
     }
-}
 
-#[derive(Debug)]
-pub struct MenuSystemSaveLoad {
-    raw_data: Box<[u8; 0x1808]>,
-    // parsed: CSMenuSystemSaveLoad,
-}
+    pub fn read_unk0x00<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<[u8; FACE_PRESET_UNK0X00]> {
+        let mut unk0x00 = [0u8; FACE_PRESET_UNK0X00];
 
-impl MenuSystemSaveLoad {
-    pub fn read_raw_data<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Box<[u8; 0x1808]>> {
-        let mut presets: Vec<u8> = Vec::with_capacity(0x1808);
+        cursor.read_exact(&mut unk0x00)?;
 
-        for _ in 0..0x1808 {
-            presets.push(cursor.read_u8_le()?);
-        }
-
-        presets
-            .into_boxed_slice()
-            .try_into()
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "raw_data len"))
+        Ok(unk0x00)
     }
 
-    pub fn read<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<Self> {
-        Ok(Self {
-            raw_data: Self::read_raw_data(cursor)?,
-        })
+    pub fn read_unk0x6c<R: Read>(
+        cursor: &mut CursorReader<R>,
+    ) -> io::Result<Box<[u8; FACE_PRESET_UNK0X6C]>> {
+        let mut unk0x6c: Vec<u8> = vec![0u8; FACE_PRESET_UNK0X6C];
+
+        cursor.read_exact(&mut unk0x6c)?;
+
+        unk0x6c
+            .into_boxed_slice()
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "FacePreset: unk0x6c len"))
+    }
+
+    pub fn read_pad<R: Read>(cursor: &mut CursorReader<R>) -> io::Result<[u8; FACE_PRESET_PAD]> {
+        let mut pad = [0u8; FACE_PRESET_PAD];
+
+        cursor.read_exact(&mut pad)?;
+
+        Ok(pad)
     }
 }
 
