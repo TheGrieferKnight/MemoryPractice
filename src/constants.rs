@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+pub const CHARACTER_SLOTS: usize = 10;
+
 pub const PC_CHARACTER_SLOT_SIZE: usize = 0x280010;
 
 pub const MAGIC_SIZE: usize = 4;
